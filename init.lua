@@ -158,12 +158,11 @@ Akm('n', '<CR>', 'i<CR><Esc>', {noremap=true})
 Akm('n', '<M-CR>', 'kA<CR><Space><BS><Esc>', {noremap=true})
 Akm('v', '<CR>', "g:V_B? '<Esc>' :'d'", {expr=true,noremap=true})
 Akm('v', 'u', '<Esc>u', {noremap=true})
+vim.g.Cwl=nil
 -- Navigator
-Cwl=nil
 Akm('n', '<Leader>u', ":lua vim.g.Cwl=not vim.g.Cwl;print('UP/DOWN key gets on '..(vim.g.Cwl and 'each line wrapped' or 'only a sub line of a wrapped line'))<CR>", {noremap=true,silent=true})
 Akm('n', '<M-y>', '<C-e>', {noremap=true})
 local C,ltsT = 1,0 -- Progressive/incr. Scroll
-vim.g.Cwl=nil
 function iScrl(U)
 	local now, R =vim.loop.hrtime(), U and U or 'j'
 	if now-ltsT< 299*1e6 then
@@ -189,38 +188,34 @@ Akm('n', '<C-Up>', '<C-b>', { noremap=true })
 Akm('n', '<C-Down>', '<C-f>', { noremap=true })
 Akm('n', '<Up>', '<C-u>', { noremap=true})
 Akm('n', '<Down>', '<C-d>', { noremap=true})
-EoL=1
---print('T S[]. I col. P',T,S[1],S[2],S[3],S[4],S[5],'\n',I,vim.fn.col('.'),P)
-EoL=1
-local R,C, Lc,Rc, T,S, p,Pre, wl = 0,0,0,0,0
+local R,C, Lc,Rc, T,S, Pt,Pre, wl = 0,0,0,0,0
 function eol(I)
 local r,c,x = unpack(vim.fn.getpos('.'),2,3)
-if EoL or I~=Pre or r~=R or c~=p then
+if I~=Pre or r~=R or c~=Pt then
 	wl= wl and wl or vim.fn.winwidth(0)-vim.opt.numberwidth:get()
-	if not EoL and r==R then
-		P=vim.fn.col('.')
-		c= Lc<P and P<Rc and P or C
-	end
+	if r==R and (c<=Lc or Rc<=c) then c=C end
 	if I then S={'^','0', vim.fn.virtcol({r,c})..'|','g_','$'}
 	else
 		S={'g_','$', vim.fn.virtcol({r,c})..'|','^','0'}
 		for e= wl,vim.fn.col('$'), wl do table.insert( S,3,e..'|') end
+		vim.g.Cwl=#S>5 and 1 or nil
 	end
-	T=0;p=0; R=r;C=c
-	Pre=I; EoL=nil
+	T=0
+	R=r;C=c; Pre=I
 end
 while	1 do T=T+1
 	Ac( 'normal! '..S[T])
 	x=vim.fn.col('.')
-	if T==2 then if I then Lc=x else Rc=x end end
-	if x~=p then p=x break end
+	if T==1 then if I then Lc=x else Rc=x end
+	elseif T==4 then if I then Rc=x else Lc=x end end
+	if x~=Pt then Pt=x break end
 	T=T % #S
 end
 T=T % #S
 end
 Akm('n', '[', ':lua eol()<CR>', {silent=true,noremap=true})
 Akm('n', '0', ':lua eol(1)<CR>', {silent=true,noremap=true})
-Akm('n', '<Leader>l', 'v<cmd>lua EoL=1;eol()<CR>', {silent=true,noremap=true})
+Akm('n', '<Leader>l', 'v<cmd>lua eol()<CR>', {silent=true,noremap=true})
 Akm('v', '<Leader>l', '<cmd>lua eol()<CR>', {silent=true,noremap=true})
 -- ;, n, Leader d, etc will delete literally, not d or x' cut
 function dEol()
