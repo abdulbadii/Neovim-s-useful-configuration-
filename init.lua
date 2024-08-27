@@ -82,11 +82,10 @@ o.shiftwidth=2
 o.tabstop=2
 O.guicursor='n-v-sm-i-ci-ve:block,i:ver49-iCursor,r:hor49,a:blinkoff99-blinkon710-Cursor/lCursor'
 vim.wo.number=true --O.cindent=true O.autoindent=true
-
 Akm('v', '<Esc>', '<cmd>let g:WDx=0<CR><Esc>', {noremap=true,silent=true})
 local preK, lasT, C= '',0,1
 function navK()
-local now, k = vim.loop.hrtime(), vim.v.char
+local now,k= vim.loop.hrtime(), vim.v.char
 if preK==k and k:match('[jlki;]') then
 	C=C+1
 	if C>3 and now-lasT<449*1e6 then
@@ -95,21 +94,20 @@ if preK==k and k:match('[jlki;]') then
 			Akm('n', ';', '', {})
 			vim.defer_fn(function()
 				Akm('n', ';', "col('.')==col('$')-1? ':lua dEol()<CR>': '\"_x'",{noremap=true,expr=true})
-			end, 710)
+			end, 740)
 		else Afk(Trm(string.rep('\b',C)..'<ESC>`^', true, false, true), 'n',true) end
 		preK=k
 	end
-else preK=k
-	C=1;lasT=now end
+else preK=k; C=1;lasT=now end
 end
 Tmr = vim.loop.new_timer()
 local inT1=nil;PreT=nil
 function sTmrK() -- Timer to auto Insert exit
 	local now, T, t = vim.loop.hrtime()
 	t= Last and (now-Last)/1e6 or 3300
-	inT1= inT1 and (inT1<571 and 770 or inT1) or (t<870 and (t>670 and 1270 or 610) or 4400)
+	inT1= inT1 and (inT1<590 and 990 or inT1) or (t<870 and (t>499 and 1270 or 590) or 4700)
 	PreT=PreT and PreT or t
-	inT1=inT1+(PreT-t>99 and -130 or (t-PreT>73 and 225 or 41))
+	inT1=inT1+(PreT-t>99 and -99 or (t-PreT>79 and 225 or 41))
 	Tmr:start( (PreT+t+inT1)/2, 0, function()
 		vim.schedule(function() Afk(Trm("<ESC>`^", true, false, true), 'n',true)
 		Tmr:stop()
@@ -132,11 +130,11 @@ Akm('n', 's', '<cmd>lua Last=vim.loop.hrtime()<CR>"_s', { noremap=true })
 Akm('n', '<Insert>', ':lua Last=vim.loop.hrtime()<CR>R', {noremap=true})
 Akm('c', '<Insert>', '<C-c>', {noremap=true})
 vim.keymap.set({'v','o','s','t'}, '<Insert>', '<cmd>let g:WDx=0<CR><Esc>', {noremap=true})
--- p behaves P except at EOL
-Akm('n', 'p', "getline('.') !~ '\\S' || col('.')<col('$')-1? 'Pl': '<cmd>lua nlP(1)<CR>'", {expr=true,noremap=true})
+-- p behaves P except at EOL, vice versa P behaves p, swaps visual-selection/register
+Akm('n', 'p', [[getline('.') !~ '\\S' || col('.')<col('$')-1? getregtype("")[0]==nr2char(22)? 'p`['.nr2char(22).'`]' :'Pl:let g:PSTD=1<CR>' : ':lua nlP(1);vim.g.PSTD=1<CR>']], {expr=true,noremap=true})
 function nlP(cEOL)
 local s,l, R,C
-l=vim.fn.getregtype()
+l=vim.fn.getregtype("")
 if cEOL or l=='V' then
 	s=vim.fn.getreg('"')
 	s=l and s:gsub('^%s+',''):gsub('%s+$',''):gsub('\n','') or s
@@ -147,20 +145,19 @@ if cEOL or l=='V' then
 elseif l=='v' then Ac('normal! ^i\010\027kp')
 else end
 end
-Akm('n', 'P', "getline('.') !~ '\\S' || col('.')<col('$')-1? 'pl': '<cmd>lua nlP(0)<CR>'", {expr=true,noremap=true})
+Akm('n', 'P', "getline('.') !~ '\\S' || col('.')<col('$')-1? 'pl:let g:PSTD=1<CR>': '<cmd>lua nlP(0):let g:PSTD=1<CR><CR>'", {expr=true,noremap=true,silent=true})
+Akm('v','P','pl',{noremap=true})
 Akm('n', '<Leader>p', "col('.')<col('$')-1? '<cmd>lua nlP()<CR>': 'a <Esc><cmd>lua nlP(1)<CR>'", {expr=true,noremap=true})
 Akm('v', 'p', [[mode()=='V'? 'p': '"_x<cmd>lua nlP(0)<CR>']], {expr=true,noremap=true})
-Akm('v','P','pl',{noremap=true})
 Akm('i', '<Leader>p', '<C-o>:lua sTmrK();nlP(0)<CR>',{noremap=true})
-Akm('n', '<M-p>', '`[v`]', {noremap=true})
 --Alt+ENTER to insert new line  at cursor
-Akm('n', '<CR>', 'i<CR><Esc>', {noremap=true})
+Akm('n', '<CR>', [[g:PSTD==1? '`['.getregtype("").'`]<cmd>let g:PSTD=0<CR>' : 'i<CR><Esc>']], {expr=true,noremap=true,silent=true})
 Akm('n', '<M-CR>', 'kA<CR><Space><BS><Esc>', {noremap=true})
 Akm('v', '<CR>', "g:V_B? '<Esc>' :'d'", {expr=true,noremap=true})
+--Akm('n', '<Leader><CR>', '', {noremap=true})
 Akm('v', 'u', '<Esc>u', {noremap=true})
 vim.g.Cwl=nil
 -- Navigator
-Akm('n', '<Leader>u', ":lua vim.g.Cwl=not vim.g.Cwl;print('UP/DOWN key gets on '..(vim.g.Cwl and 'each line wrapped' or 'only a sub line of a wrapped line'))<CR>", {noremap=true,silent=true})
 Akm('n', '<M-y>', '<C-e>', {noremap=true})
 local C,ltsT = 1,0 -- Progressive/incr. Scroll
 function iScrl(U)
@@ -270,7 +267,7 @@ function! SSel()
 endfunction
 vnoremap / :call SSel()<CR>
 ]])
-vim.g.WDx=0;vim.g.J='' --Select (through) word string joined by .-/\+*
+vim.g.WDx=0;vim.g.J='' --Select (through) word string joined by .-=/\+*
 A.nvim_exec([[
 function! s:wdx()
 if !g:WDx
@@ -278,7 +275,7 @@ if !g:WDx
 	let c=getpos("'>")[2]
 	let s=getline(R)
 	let Jno= g:J==''
-	let g:J= Jno? '[-./\\+*]' : '['.g:J.']'
+	let g:J= Jno? '[-.=/\\+*]' : '['.g:J.']'
 	let [t,b,en]=matchstrpos(s,"\\v^\\w+\\zs%((".g:J.")\\w+%(\\1\\w+)*)?", C-1)
 	let s:ST=[] |let s:o=[R,C]
 	let FND= b!=en |let b+=1
@@ -317,18 +314,17 @@ let s:I+=1
 endfunction
 function! WDX()
 	let s=getline('.') |let c=col('.')
-	if s[c-1]=~'\w' |normal! viw
-		let g:J=''
-	else
+	if s[c-1] =~ '\w' | let g:J=''| normal! viw
+	elseif s[c-2].s[c-1].s[c] =~ '\w[-.=/\\+*]\w'
 		execute "normal! lviw\<Esc>"
-		let g:J=matchlist(s, "\\v\\w+([-./\\+*])\\w+%(\\1\\w+)*.{,".(col('$')-c-strlen(expand('<cword>')))."}$")[1]
+		let g:J=matchlist(s, "\\v\\w+([-.=/\\+*])\\w+%(\\1\\w+)*.{,".(col('$')-c-strlen(expand('<cword>')))."}$")[1]
 		if g:J !='' |let g:WDx=0 |call <SID>wdx()
 	endif|endif
 endfunction
-nnoremap <expr><silent> <Leader>y getline('.')[col('.')-1]=~"\\v\\w\|[-./\\+*]"? ':call WDX()<CR>':''
+nnoremap <silent> <Leader>y :call WDX()<CR>
 vnoremap <silent> <Leader>y :call <SID>wdx()<CR>
 nnoremap <silent> <Leader>3 :%s/\v\s+$//<CR>
-]], false) --^ doc cleanup of trailing-space
+]], false) --^ doc trailing-space cleanup
 local Sw2n, R,C = nil -- 2 words/selections swap
 function swS()
   local VBlk, l, t, Y,X, y,x = vim.fn.mode()=='\022',0
