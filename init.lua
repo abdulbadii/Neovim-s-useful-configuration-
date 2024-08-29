@@ -1,22 +1,39 @@
 A =vim.api
-local O, o = vim.o, vim.opt
-local Akm, Ac, ALn= A.nvim_set_keymap, A.nvim_command, A.nvim_get_current_line
+local O,o = vim.o,vim.opt
+local Akm, Ac = A.nvim_set_keymap, A.nvim_command
 local Inp, Afk,Trm = A.nvim_input, A.nvim_feedkeys,A.nvim_replace_termcodes
-o.cursorline=true -- Cursor line hilite. On GUI, comment out Terminal by --[=[     ]=]
+--[[
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+ vim.fn.system({
+  "git",
+  "clone",
+  "--filter=blob:none",
+  "https://github.com/folke/lazy.nvim.git",
+  "--branch=stable", -- latest stable release
+  lazypath,
+ })
+end
+vim.opt.rtp:prepend(lazypath)
+--require("lazy").setup({
+--})
+]]
 -- GUI
+o.cursorline=true -- Cursor line hilite. On GUI, comment out Terminal by --[=[     ]=]
 A.nvim_exec([[
-highlight LineNr guifg=#CFCFCF
-highlight CursorLine guibg=#494949 gui=NONE
-highlight CursorLineNr guibg=#FF0909 guifg=#FFFFFF gui=NONE
+highlight LineNr guifg=#DFDFDF
+highlight CursorLine guibg=#001927 gui=NONE
+highlight CursorLineNr guibg=#FFF009 guifg=#000019 gui=NONE
 highlight Search guibg=#D03000 guifg=#FFFF00 gui=NONE
-highlight Visual guibg=#FFEE00 guifg=#000000
+highlight Visual guibg=#FF09F0 guifg=#000000
 autocmd!
-autocmd InsertLeave * highlight CursorLine guibg=#004171 gui=NONE
-autocmd InsertLeave * highlight CursorLineNr guibg=#FF0909 guifg=#FFFFFF
-autocmd InsertEnter * highlight CursorLine guibg=NONE guifg=NONE gui=underline
-autocmd InsertEnter * highlight CursorLineNr guibg=#03DD03 guifg=#000000 ]],
+autocmd InsertLeave * highlight CursorLine guibg=#001927 gui=NONE
+autocmd InsertLeave * highlight CursorLineNr guibg=#FFF009 guifg=#000019
+autocmd InsertEnter * highlight CursorLine guifg=NONE guibg=NONE gui=underline
+autocmd InsertEnter * highlight CursorLineNr guibg=#0303EE guifg=#FBFB00 ]],
 false)
--- Terminal --[=[
+-- Terminal
+--[=[
 A.nvim_exec([[
 highlight LineNr ctermfg=254
 highlight CursorLine ctermbg=17 cterm=NONE
@@ -28,7 +45,8 @@ autocmd InsertLeave * highlight CursorLine ctermbg=17 cterm=NONE
 autocmd InsertLeave * highlight CursorLineNr ctermbg=yellow ctermfg=black
 autocmd InsertEnter * highlight CursorLine ctermfg=NONE ctermbg=236 cterm=underline
 autocmd InsertEnter * highlight CursorLineNr ctermbg=19 ctermfg=yellow
-]],false) --]=]
+]],false)
+--]=]
 -- no auto comment, cursor at last edit position at rows center, leader key TO etc
 A.nvim_exec([[
 autocmd FileType * setlocal formatoptions-=cro
@@ -36,11 +54,11 @@ autocmd BufReadPost * if line("'\"") >0 && line("'\"") <= line('$') | exe 'norma
 autocmd BufReadPost * execute "normal! zz5\<C-y>"
 autocmd VimLeavePre * let @c = &cmdheight
 autocmd VimEnter * let &cmdheight= @c| set scroll=3
-autocmd CmdlineLeave * if getcmdtype()=~'[/?]' |call searchcount() |endif |set scroll=3
+autocmd CmdlineLeave * if getcmdtype()=~'[/?]' |call searchcount() |endif
 autocmd InsertEnter * set timeoutlen=199
 autocmd InsertLeave * set timeoutlen=530 |lua Tmr:stop()
 autocmd InsertCharPre * lua navK()
-autocmd TextChangedI * lua Tmr:stop();sTmrK()
+autocmd TextChangedI * lua sTmrK()
 autocmd ModeChanged [vV\x16]:* let g:V_B=0
 ]],false)
 o.clipboard:append('unnamedplus')
@@ -60,22 +78,6 @@ name = 'win32yank',
 end]])
 ]=]
 vim.g.mapleader=' ' --spacebar is leader key --vim.g.maplocalleader = "9"
---[[
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not (vim.uv or vim.loop).fs_stat(lazypath) then
- vim.fn.system({
-  "git",
-  "clone",
-  "--filter=blob:none",
-  "https://github.com/folke/lazy.nvim.git",
-  "--branch=stable", -- latest stable release
-  lazypath,
- })
-end
-vim.opt.rtp:prepend(lazypath)
---require("lazy").setup({
---})
-]]
 o.compatible=false
 o.whichwrap:append('<,>,[,],l')
 o.shiftwidth=2
@@ -95,22 +97,23 @@ if preK==k and k:match('[jlki;]') then
 			vim.defer_fn(function()
 				Akm('n', ';', "col('.')==col('$')-1? ':lua dEol()<CR>': '\"_x'",{noremap=true,expr=true})
 			end, 740)
-		else Afk(Trm(string.rep('\b',C)..'<ESC>`^', true, false, true), 'n',true) end
+		else Afk(Trm(string.rep('\b',C)..'<ESC>`^', 1,nil,1), 'n',1) end
 		preK=k
 	end
 else preK=k; C=1;lasT=now end
 end
 Tmr = vim.loop.new_timer()
 local inT1=nil;PreT=nil
-function sTmrK() -- Timer to auto Insert exit
+function sTmrK() -- Timer to auto exit Insert
+	Tmr:stop()
 	local now, T, t = vim.loop.hrtime()
 	t= Last and (now-Last)/1e6 or 3300
-	inT1= inT1 and (inT1<590 and 990 or inT1) or (t<870 and (t>499 and 1270 or 590) or 4700)
+	inT1= inT1 and inT1 or (t<900 and (t>610 and 1330 or 720) or 4700)
 	PreT=PreT and PreT or t
-	inT1=inT1+(PreT-t>99 and -99 or (t-PreT>79 and 225 or 41))
+	inT1=inT1+(t-PreT>79 and 195 or t-PreT>0 and 45 or 0)
 	Tmr:start( (PreT+t+inT1)/2, 0, function()
-		vim.schedule(function() Afk(Trm("<ESC>`^", true, false, true), 'n',true)
-		Tmr:stop()
+		vim.schedule(function()
+		Afk(Trm("<ESC>`^", 1, nil, 1), 'n',true)
 		Last=nil;inT1=nil;PreT=nil
 		end)
 	end)
@@ -120,9 +123,8 @@ vim.g.V_B=0
 IHld=1 -- h into Insert mode, Leader h toggling keep/cancel auto exit
 Akm('n', 'h', "col('.')<col('$')-1? ':lua Last=vim.loop.hrtime()<CR>i' :':lua Last=vim.loop.hrtime()<CR>a'", {expr=true,noremap=true,silent=true})
 Akm('v', 'h', [[mode()=="\<C-v>"? 'c': col('.')<col('$')-1? '<cmd>lua Last=vim.loop.hrtime()<CR>"_xi' :'<cmd>lua Last=vim.loop.hrtime()<CR>"_xa']], {expr=true,noremap=true,silent=true})
-Akm('i', '<Leader>h', "<C-o>:lua if IHld then Tmr:stop();Last=nil;inT1=nil;PreT=nil;IHld=nil;print('No timeout to exit Insert') else sTmrK();IHld=1;print('Auto exit Insert by timeout')end<CR>", {noremap=true})
+Akm('i', '<Leader>h', "<C-o>:lua if IHld then Tmr:stop();Last=nil;inT1=nil;PreT=nil;IHld=nil;print('No timeout to exit') else sTmrK();IHld=1;print('Auto exit by timeout')end<CR>", {noremap=true})
 Akm('n', '<Space>', 'i <Esc>`^', {noremap=true,silent=true})
-Akm('n', '<Leader><Space>', 'V', {noremap=true,silent=true})
 Akm('n', '<Leader>h', "col('.')<col('$')-1? '' :'<cmd>lua Last=vim.loop.hrtime()<CR>i'", {expr=true,noremap=true})
 Akm('v', '<Leader>i', [[mode()=="\<C-v>" ? '<cmd>lua Last=vim.loop.hrtime()<CR>I': '']],{expr=true,noremap=true})
 Akm('n', 's', '<cmd>lua Last=vim.loop.hrtime()<CR>"_s', { noremap=true })
@@ -130,31 +132,43 @@ Akm('n', 's', '<cmd>lua Last=vim.loop.hrtime()<CR>"_s', { noremap=true })
 Akm('n', '<Insert>', ':lua Last=vim.loop.hrtime()<CR>R', {noremap=true})
 Akm('c', '<Insert>', '<C-c>', {noremap=true})
 vim.keymap.set({'v','o','s','t'}, '<Insert>', '<cmd>let g:WDx=0<CR><Esc>', {noremap=true})
--- p behaves P except at EOL, vice versa P behaves p, swaps visual-selection/register
-Akm('n', 'p', [[getline('.') !~ '\\S' || col('.')<col('$')-1? getregtype("")[0]==nr2char(22)? 'p`['.nr2char(22).'`]' :'Pl:let g:PSTD=1<CR>' : ':lua nlP(1);vim.g.PSTD=1<CR>']], {expr=true,noremap=true})
-function nlP(cEOL)
-local s,l, R,C
-l=vim.fn.getregtype("")
-if cEOL or l=='V' then
-	s=vim.fn.getreg('"')
-	s=l and s:gsub('^%s+',''):gsub('%s+$',''):gsub('\n','') or s
-	_,R,C = unpack(vim.fn.getpos('.'))
-	C=C+(cEOL or 0)
+-- Selection
+Akm('n', '<Leader><Space>', 'V', {noremap=true,silent=true})
+Akm('n', '<Leader>j', 'v', {noremap=true})
+Akm('n', '<Leader>v', '<C-v>', {noremap=true})
+-- p behaves P except at EOL, vice versa P behaves p, swapping visual-sel/register
+Akm('n', 'p', [[ getline('.') !~ "\\S" || col('.')<col('$')-1? getregtype("")[0]==nr2char(22)? 'P`['.nr2char(22).'`]' : 'Pl' : ':lua nlP(1)<CR>']], {expr=true,noremap=true})
+function nlP(E)
+local l, R,C,s,t = {}, unpack(vim.fn.getpos('.'),2,3)
+t=vim.fn.getregtype("")
+s=vim.fn.getreg("")
+if not E and t=='v' then Ac('normal! ^i\010\027kp')
+elseif t=='V' then
+	s=s:gsub('^%s+',''):gsub('%s+$',''):gsub('\n','')
+	C=C+(E or 0)
 	A.nvim_buf_set_text(0, R-1,C-1, R-1,C-1, {s})
 	Ac('normal! '..vim.fn.virtcol({R,C+#s})..'|')
-elseif l=='v' then Ac('normal! ^i\010\027kp')
-else end
+elseif E then
+	if E>1 then
+		s=s:gsub('\n',' ')
+		A.nvim_buf_set_text(0, R-1,C-1, R-1,C-1, {s})
+		Ac('normal! '..vim.fn.virtcol({R,C})..'|v'..vim.fn.virtcol({R,C+#s})..'|')
+	else vim.cmd('normal! '..(E==1 and 'p' or 'P')..'`[`]') end
+else
+	for m in (s..'\n'):gmatch("(.-)"..'\n') do table.insert(l,m) end
+	vim.cmd('normal! 0i'..string.rep('\013',#l)..'\027'..#l..'-P')
 end
-Akm('n', 'P', "getline('.') !~ '\\S' || col('.')<col('$')-1? 'pl:let g:PSTD=1<CR>': '<cmd>lua nlP(0):let g:PSTD=1<CR><CR>'", {expr=true,noremap=true,silent=true})
+end
+Akm('n', 'P', [[getline('.')!~"\\S" || col('.')<col('$')-1? 'pl': ':lua nlP(0)<CR>']], {expr=true,noremap=true,silent=true})
 Akm('v','P','pl',{noremap=true})
-Akm('n', '<Leader>p', "col('.')<col('$')-1? '<cmd>lua nlP()<CR>': 'a <Esc><cmd>lua nlP(1)<CR>'", {expr=true,noremap=true})
+Akm('n', '<Leader>p', "col('.')<col('$')-1? ':lua nlP()<CR>': 'a <Esc>:lua nlP(1)<CR>'", {expr=true,noremap=true,silent=true})
+Akm('n', '<Leader>P', [[getregtype("")[0]==nr2char(22)? ':lua nlP(2)<CR>':'']], {expr=true,noremap=true,silent=true})
 Akm('v', 'p', [[mode()=='V'? 'p': '"_x<cmd>lua nlP(0)<CR>']], {expr=true,noremap=true})
-Akm('i', '<Leader>p', '<C-o>:lua sTmrK();nlP(0)<CR>',{noremap=true})
---Alt+ENTER to insert new line  at cursor
-Akm('n', '<CR>', [[g:PSTD==1? '`['.getregtype("").'`]<cmd>let g:PSTD=0<CR>' : 'i<CR><Esc>']], {expr=true,noremap=true,silent=true})
+-- Normal's ENTER like Insert's, its Alt drops current line down
+Akm('n', '<CR>', 'i<CR><Esc>', {noremap=true,silent=true})
 Akm('n', '<M-CR>', 'kA<CR><Space><BS><Esc>', {noremap=true})
 Akm('v', '<CR>', "g:V_B? '<Esc>' :'d'", {expr=true,noremap=true})
---Akm('n', '<Leader><CR>', '', {noremap=true})
+Akm('n', '<Leader>4', [['`['.getregtype("").'`]']], {expr=true})
 Akm('v', 'u', '<Esc>u', {noremap=true})
 vim.g.Cwl=nil
 -- Navigator
@@ -185,36 +199,36 @@ Akm('n', '<C-Up>', '<C-b>', { noremap=true })
 Akm('n', '<C-Down>', '<C-f>', { noremap=true })
 Akm('n', '<Up>', '<C-u>', { noremap=true})
 Akm('n', '<Down>', '<C-d>', { noremap=true})
-local R,C, Lc,Rc, T,S, Pt,Pre, wl = 0,0,0,0,0
-function eol(I)
+local R,C, Lc,Rc, I,S, Pt,Pre, Wrp = 0,0,0,0,0 -- Get through end points on line
+function eol(i)
 local r,c,x = unpack(vim.fn.getpos('.'),2,3)
-if I~=Pre or r~=R or c~=Pt then
-	wl= wl and wl or vim.fn.winwidth(0)-vim.opt.numberwidth:get()
+if i~=Pre or r~=R or c~=Pt then
+	Wrp= Wrp and Wrp or vim.fn.winwidth(0)-vim.opt.numberwidth:get()
 	if r==R and (c<=Lc or Rc<=c) then c=C end
-	if I then S={'^','0', vim.fn.virtcol({r,c})..'|','g_','$'}
+	if i then S={'^','0', vim.fn.virtcol({r,c})..'|','g_','$'}
 	else
 		S={'g_','$', vim.fn.virtcol({r,c})..'|','^','0'}
-		for e= wl,vim.fn.col('$'), wl do table.insert( S,3,e..'|') end
-		vim.g.Cwl=#S>5 and 1 or nil
+		for e= Wrp,vim.fn.col('$'), Wrp do table.insert( S,3,e..'|') end
 	end
-	T=0
-	R=r;C=c; Pre=I
+	vim.g.Cwl= Wrp<vim.fn.col('$') and 1 or nil
+	I=0; R=r;C=c; Pre=i; Pt=0
 end
-while	1 do T=T+1
-	Ac( 'normal! '..S[T])
+while	1 do I=I+1
+	Ac( 'normal! '..S[I])
 	x=vim.fn.col('.')
-	if T==1 then if I then Lc=x else Rc=x end
-	elseif T==4 then if I then Rc=x else Lc=x end end
+	if I==1 then if i then Lc=x else Rc=x end
+	elseif I==4 then if i then Rc=x else Lc=x end end
 	if x~=Pt then Pt=x break end
-	T=T % #S
+	I=I % #S
 end
-T=T % #S
+I=I % #S
 end
 Akm('n', '[', ':lua eol()<CR>', {silent=true,noremap=true})
 Akm('n', '0', ':lua eol(1)<CR>', {silent=true,noremap=true})
+Akm('v', '0', '<cmd>lua eol(1)<CR>', {silent=true,noremap=true})
 Akm('n', '<Leader>l', 'v<cmd>lua eol()<CR>', {silent=true,noremap=true})
 Akm('v', '<Leader>l', '<cmd>lua eol()<CR>', {silent=true,noremap=true})
--- ;, n, Leader d, etc will delete literally, not d or x' cut
+-- ;, n, Del, etc will delete literally, unlike d or x' cut
 function dEol()
 	Ac("nnoremap ; \\<Nop> |normal! \"_x")
 	vim.defer_fn(function()
@@ -223,6 +237,7 @@ end
 Akm('n', ';', "col('.')==col('$')-1? ':lua dEol()<CR>': '\"_x'", {noremap=true,expr=true})
 Akm('v', ';', '"_d', { noremap=true })
 Akm('n', '<Leader>;', '"_d$', { noremap=true })
+Akm('n', 'D', '"_D', { noremap=true })
 Akm('i', "<Leader>;", '<C-o>"_d$', { noremap=true })
 Akm('n', '<Del>', [[col('.') >= col('$')-1 ? '"_xa': '"_x']], { noremap=true,expr=true})
 Akm('i', '<Del>', [[col('.') == col('$') ? '': '<C-o>"_x']], { noremap=true,expr=true })
@@ -234,10 +249,7 @@ Akm('n', 'n', '"_dd', { noremap=true, silent=true })
 
 Akm('n', '<Leader>t', 'i	<Esc>`^', {noremap=true}) --Tab
 Akm('i', '<Leader>t', '	', {noremap=true})
-Akm('n', '<Leader>v', '<C-v>', {noremap=true})
-Akm('n', '<M-o>', 'o', {noremap=true})-- original o by Alt+o
-Akm('n', '<M-BS>', ':lua EoL=1;T=1<CR>', {silent=true,noremap=true})
---^ Alt+BS reset cyclic jobs to readily start new one
+Akm('n', '<M-o>', 'o', {noremap=true}) --Vim o by Alt+o
 -- Search. Alt+BACKSP clears cmd entry
 Ac([[
 cnoremap <M-BS> <C-u>
@@ -317,7 +329,7 @@ function! WDX()
 	if s[c-1] =~ '\w' | let g:J=''| normal! viw
 	elseif s[c-2].s[c-1].s[c] =~ '\w[-.=/\\+*]\w'
 		execute "normal! lviw\<Esc>"
-		let g:J=matchlist(s, "\\v\\w+([-.=/\\+*])\\w+%(\\1\\w+)*.{,".(col('$')-c-strlen(expand('<cword>')))."}$")[1]
+		let g:J=matchlist(s,"\\v\\w+([-.=/\\+*])\\w+%(\\1\\w+)*.{,".(col('$')-c-strlen(expand('<cword>')))."}$")[1]
 		if g:J !='' |let g:WDx=0 |call <SID>wdx()
 	endif|endif
 endfunction
@@ -325,30 +337,41 @@ nnoremap <silent> <Leader>y :call WDX()<CR>
 vnoremap <silent> <Leader>y :call <SID>wdx()<CR>
 nnoremap <silent> <Leader>3 :%s/\v\s+$//<CR>
 ]], false) --^ doc trailing-space cleanup
-local Sw2n, R,C = nil -- 2 words/selections swap
+local Sw2n, LEN,Len,R,C,r,c = nil,0,0 --2 words/selections swap
 function swS()
-  local VBlk, l, t, Y,X, y,x = vim.fn.mode()=='\022',0
-	vim.cmd [[highlight Word ctermbg=4 ctermfg=11 cterm=none]]
+  local VBlk, t, Y,X, y,x = vim.fn.mode()=='\022'
+	vim.cmd "highlight Word guibg=#00EF00 guifg=#FF00BB"
+	--vim.cmd "highlight Word ctermbg=10 ctermfg=0"
 	if VBlk then
 		V_C=vim.fn.virtcol({R,C})
 		V_c=vim.fn.virtcol({r,c})
 	elseif Sw2n then
-		Ac('normal! '..(vSl and '' or 'viw')..'p')
-		A.nvim_buf_set_text(0, R-1,C-1, r-1, c, {vim.fn.getreg('"')})
-		A.nvim_buf_clear_namespace(0, -1, R-1, R) Sw2n=nil
-	else
+		Ac('normal! '..(vSl and '' or 'viw')..'\027')
+		_,Y,X = unpack(vim.fn.getpos("'<"))
+		_,y,x = unpack(vim.fn.getpos("'>"))
+		t=A.nvim_buf_get_text(0, Y-1,X-1, y-1,x, {})
+		for _,s in ipairs(t) do Len=Len+#s end
+		Ac('normal! gvP')
+		A.nvim_buf_add_highlight(0, 0, 'Word', Y-1, X-1, X-1+LEN)
+		A.nvim_buf_set_text(0, R-1,C-1, r-1, c, t)
+		A.nvim_buf_add_highlight(0,-1, 'Word', R-1, C-1, C-1+Len)
+		vim.defer_fn(function()
+			A.nvim_buf_clear_namespace(0, -1, R-1, R)
+			A.nvim_buf_clear_namespace(0, 0, Y-1, Y) end,2770)
+		Sw2n=nil
+	else LEN=0; Len=0
 		Ac('normal! '..(vSl and 'y' or 'viwy'))
 		_,R,C = unpack(vim.fn.getpos("'<"))
 		_,r,c = unpack(vim.fn.getpos("'>"))
 		t=A.nvim_buf_get_text(0, R-1,C-1, r-1,c, {})
-		for _,s in ipairs(t) do l=l+#s end
-		A.nvim_buf_add_highlight(0,-1, 'Word', R-1, C-1, C-1+l)
-		print('Put cursor on a word or make selection else to swap') Sw2n=1
+		for _,s in ipairs(t) do LEN=LEN+#s end
+		A.nvim_buf_add_highlight(0,-1, 'Word', R-1, C-1, C-1+LEN)
+		print('Go on next selection or word to swap') Sw2n=1
 	end
 	vSl=nil
 end
-Akm('n', '<Leader>P', ':lua swS()<CR>', {noremap=true})
-Akm('v', '<Leader>P', '<cmd>lua vSl=1;swS()<CR>', {})
+Akm('n', '<Leader><CR>', ':lua swS()<CR>', {noremap=true})
+Akm('v', '<Leader><CR>', '<cmd>lua vSl=1;swS()<CR>', {})
 -- Duplicate line or selection
 Akm('n', 'b', ':t.<CR>', {})
 function dup(S)
@@ -443,10 +466,10 @@ if s:i
 execute K.s:S[s:i].(g:Vlc? (s:i==3? '|normal! ':'').'gv': '')
 let s:i+=1 |let s:i %= 5 
 endfunction
-nnoremap <expr><silent> gu getline('.')[col('.')-1]=~'\a'? 'viw:<C-u>call LtrC()<CR>' :''
+nnoremap <expr><silent> gu getline('.')[col('.')-1]=~'\w'? 'viw:<C-u>call LtrC()<CR>' :''
 vnoremap <silent> gu :<C-u>let g:Vlc=1\|call LtrC()<CR>
 ]])
--- Move selected up
+-- Move line/selected up
 function slUP()
 local VBlk, blk, l, s, co, V_C, V_c, wd, base,t = vim.fn.mode()=='\022', {}
 Ac('normal! \027')
@@ -494,7 +517,7 @@ end vim.g.V_B=1
 end
 Akm('n', 'I', ':m .-2<CR>', {noremap=true,silent=true})
 Akm('v', 'I', [[mode()=='V'? ":let g:V_B=1|<C-u>'<-1m '><CR>gv=gv": '<cmd>lua slUP()<CR>']], {noremap=true,expr=true,silent=true})
--- Move selected down
+-- Move line/selected down
 function slDN()
 local VBlk, blk, l, s, co, V_C, V_c, wd, base,t = vim.fn.mode()=='\022', {}
 Ac('normal! \027')
@@ -643,7 +666,7 @@ Akm('v', 'c', '', {noremap=true})
 Akm('n', '<Leader>1', '^vg_', {noremap=true})
 Akm('n', '<Leader>9', ':set hlsearch! hlsearch?<CR>',{})
 Akm('n', '<Leader>q', ':n noname<CR>', {})
-Akm('n', '<Leader>z', '<C-w>w', { noremap=true }) --Switch buffers
+Akm('n', '<Leader>z', '<C-w>w', {noremap=true}) --Switch buffers
 O.mouse='a' -- Mouse support toggle
 vim.keymap.set({'n','i','c'}, '<F9>', '', {callback=function()
  if O.mouse=='a' then
@@ -655,8 +678,8 @@ vim.keymap.set({'n','i','v','c'}, '<F6>','',{callback=function()
   O.cmdheight = O.cmdheight<7 and O.cmdheight+1 or 1
 end})
 -- show/hide line#
-Akm('n', '<F5>', ':lua im.wo.number= not vim.wo.number<CR>', { noremap=true,silent=true})
--- Save  - Exit ignore change
+Akm('n', '<F5>',':lua im.wo.number=not vim.wo.number<CR>', {noremap=true,silent=true})
+-- Save, Exit
 vim.keymap.set({'n','v','i','c'}, '<Leader>x', '', {callback=function()
  if A.nvim_buf_get_option(A.nvim_get_current_buf(), 'modified') then  Ac('w')
  elseif #A.nvim_list_wins() >1 then Ac('q')
@@ -664,11 +687,10 @@ vim.keymap.set({'n','v','i','c'}, '<Leader>x', '', {callback=function()
   Ac('bp| bd #')
  else  Ac('q') end
 end})
--- END is switch to the next/previous buffer
-Akm('n', '<End>', ':bp<CR>', {})
+Akm('n', '<End>', ':bp<CR>', {}) -- END switch to the next/previous buffer
 
 function bg256co()
-local B = A.nvim_create_buf(false, true)  -- new, unlisted, scratch/temporary buffer
+local B = A.nvim_create_buf(nil, 1)  -- new, unlisted, scratch/temporary buffer
 local opts = {
   style = "minimal",
   relative = "editor",
@@ -684,8 +706,8 @@ for bg = 1, 255 do
   end
  end
 end
-A.nvim_buf_set_lines(B, 0, -1, false, lines)
-local c, win = 0, A.nvim_open_win(B, true, opts)
+A.nvim_buf_set_lines(B, 0, -1, nil, lines)
+local c, win = 0, A.nvim_open_win(B, 1, opts)
 A.nvim_win_set_option(win, 'winhl', 'Normal:FloatingWindowBG')
 Ac("highlight FloatingWindowBG ctermbg=0")
 -- Define highlight groups, apply it
