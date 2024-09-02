@@ -78,7 +78,7 @@ o.tabstop=2
 O.guicursor='n-v-sm-i-ci-ve:block,i:ver49-iCursor,r:hor49,a:blinkoff99-blinkon710-Cursor/lCursor'
 vim.wo.number=true --O.cindent=true O.autoindent=true
 Akm('v', '<Esc>', '<cmd>let g:WDx=0<CR><Esc>', {noremap=true,silent=true})
-local preK, lasT,C = '',0,1 -- Quick repetitive nav. key on Insert will exit it
+local preK, lasT,C = '',0,1 -- Fast repetitive nav. keys in Insert will exit it
 function navK()
 local now,k= vim.loop.hrtime(), vim.v.char
 if preK==k and k:match('[jlki;]') then C=C+1
@@ -91,7 +91,7 @@ if preK==k and k:match('[jlki;]') then C=C+1
 					Akm('n', ';', "col('.')==col('$')-1? ':lua dEol()<CR>': '\"_x'",{noremap=true,expr=true})
 				end, 740)
 			else Afk(Trm(string.rep('\b',C)..'<ESC>`^', 1,nil,1), 'n',1) end
-		else C=1 end
+		end C=1
 	end
 else preK=k; C=1;lasT=now end
 end
@@ -113,43 +113,43 @@ function sTmrK() -- Timer to auto exit Insert
 	Last=now; PreT=t
 end
 vim.g.V_B=0
-Hld=1 -- h into Insert mode, Leader h toggling keep/cancel auto exit
+Hld=1 -- h into Insert mode, Leader h toggling keep/clear auto exit
 Akm('n', 'h', "col('.')<col('$')-1? ':lua Last=vim.loop.hrtime()<CR>i' :':lua Last=vim.loop.hrtime()<CR>a'", {expr=true,noremap=true,silent=true})
 Akm('v', 'h', [[mode()=="\<C-v>"? 'c': col('.')<col('$')-1? '<cmd>lua Last=vim.loop.hrtime()<CR>"_xi' :'<cmd>lua Last=vim.loop.hrtime()<CR>"_xa']], {expr=true,noremap=true,silent=true})
 Akm('i', '<Leader>h', "<C-o>:lua if PreT then if Hld then Tmr:stop();inT1=nil;Hld=nil;print('No auto exit to Normal') vim.cmd[[autocmd! TextChangedI]] else PreT=nil;Last=vim.loop.hrtime();Hld=1;print('Auto exit on timeout') vim.cmd[[autocmd TextChangedI * lua sTmrK()]]end else vim.cmd[[stopinsert]] end<CR>", {noremap=true,silent=true})
-Akm('n', '<Space>', "col('.')<col('$')-1? 'i <Esc>`^': 'a <Esc>`^'", {expr=true,noremap=true,silent=true})
 Akm('n', '<Leader>h', "col('.')<col('$')-1? '' :'<cmd>lua Last=vim.loop.hrtime()<CR>i'", {expr=true,noremap=true})
 Akm('v', '<Leader>i', [[mode()=="\<C-v>" ? '<cmd>lua Last=vim.loop.hrtime()<CR>I': '']],{expr=true,noremap=true})
 Akm('n', 's', '<cmd>lua Last=vim.loop.hrtime()<CR>"_s', {noremap=true})
 -- Normal's ENTER like Insert's, its Alt drops current line down
 Akm('n', '<CR>', 'i<CR><Esc>', {noremap=true,silent=true})
-Akm('n', '<M-CR>', "col('.')<col('$')-1? 'kA<CR><Space><BS><Esc>': 'i <Esc>`^'", {expr=true,noremap=true})
+Akm('n', '<M-CR>', "col('.')<col('$')-1? 'kA<CR><Space><BS><Esc>': 'a<CR><Esc>'", {expr=true,noremap=true})
 Akm('v', '<CR>', "g:V_B? '<Esc>' :'d'", {expr=true,noremap=true})
 -- INS is into replace mode, toggling there. else does ESC/exit
 Akm('n', '<Insert>', ':lua Last=vim.loop.hrtime()<CR>R', {noremap=true})
 Akm('c', '<Insert>', '<C-c>', {noremap=true})
 vim.keymap.set({'v','o','s','t'}, '<Insert>', '<cmd>let g:WDx=0<CR><Esc>', {noremap=true})
--- Selection 
-Akm('n', '<Leader><Space>', 'V', {noremap=true,silent=true})
-Akm('n', '<Leader>j', 'v', {noremap=true,silent=true})
-Akm('n', '<Leader>v', '<C-v>', {noremap=true})
+
+Akm('n', '<Space>', "col('.')<col('$')-1? 'i <Esc>`^': 'a <Esc>`^'", {expr=true,noremap=true})
+Akm('v', '<Space>', [[mode()=='v'? '<C-v>': mode()=="\<C-v>"? 'v' :'<C-v>']], {expr=true,noremap=true})
+Akm('v', '<M-Space>', "mode()=='v'? 'V': mode()=='V'? '<C-v>': 'V'", {expr=true,noremap=true})
+Akm('n', '<M-Space>', "col('.')<col('$')-1? '': 'i <Esc>`^'", {expr=true,noremap=true})
 -- p behaves P except at EOL, vice versa P behaves p, in visual it'll swap selc./register
 function nlP(E)
 local l, R,C,s,t = {}, unpack(vim.fn.getpos('.'),2,3)
 t=vim.fn.getregtype("")
 s=vim.fn.getreg("")
-if E then
-	if t=='V' or t=='v' then
-		s=s:gsub('^%s+',''):gsub('%s+$',''):gsub('\n','')
-		C=C+(E or 0)
-		A.nvim_buf_set_text(0, R-1,C-1, R-1,C-1, {s})
-		Ac('normal! '..vim.fn.virtcol({R,C+#s})..'|')
-	else --if string.sub(t,1,1)=='\022' then
+if E or t=='V' then
+	if string.sub(t,1,1)=='\022' then
 		if E>1 then
 			s=s:gsub('\n',' ')
 			A.nvim_buf_set_text(0, R-1,C-1, R-1,C-1, {s})
 			Ac('normal! '..vim.fn.virtcol({R,C})..'|v'..vim.fn.virtcol({R,C+#s})..'|')
 		else vim.cmd('normal! '..(E==1 and 'p' or 'P')..'`[`]') end
+	else
+		s=s:gsub('^%s+',''):gsub('%s+$',''):gsub('\n','')
+		C=C+(E or 0)
+		A.nvim_buf_set_text(0, R-1,C-1, R-1,C-1, {s})
+		Ac('normal! '..vim.fn.virtcol({R,C+#s})..'|')
 	end
 else
 	if t=='v' then Ac('normal! ^i\010\027kp')
@@ -161,23 +161,22 @@ end
 end
 Akm('n', 'p', [[ getline('.') !~ "\\S" || col('.')<col('$')-1? getregtype("")=~'^[\x16]'? 'P`['.nr2char(22).'`]' : 'Pl' : ':lua nlP(1)<CR>']], {expr=true,noremap=true,silent=true})
 Akm('n','P','pl',{noremap=true,silent=true})
-Akm('v', 'p', [[mode()=='V'? 'p': getregtype("")=='v'? '"_xPl': '"_x<cmd>lua nlP(2)<CR>']], {expr=true,noremap=true,silent=true})
+Akm('v', 'p', [[mode()=='V'? 'p': getregtype("")=='v'? col('.')<col('$')-1? '"_xPl': '"_xpl': '"_x<cmd>lua nlP(2)<CR>']], {expr=true,noremap=true,silent=true})
 Akm('v','P', [[getregtype("")=~'^[\x16]'? '"_x<cmd>:lua nlP(0)<CR>': 'pl']] ,{expr=true,noremap=true})
 Akm('n', '<Leader>p', "col('.')<col('$')-1? ':lua nlP()<CR>': ':lua nlP(0)<CR>'", {expr=true,noremap=true,silent=true})
 Akm('n', '<Leader>P', [[getregtype("")[0]==nr2char(22)? ':lua nlP(2)<CR>':'']], {expr=true,noremap=true,silent=true})
 Akm('n', '<Leader>4', [['`['.getregtype("").'`]']], {expr=true})
 vim.g.Cwl=nil
 -- Navigator
-Akm('n', '<M-y>', '<C-e>', {noremap=true})
 local C,ltsT = 1,0 -- Progressive/incr. Scroll
 function iScrl(U)
 	local now, R =vim.loop.hrtime(), U and U or 'j'
 	if now-ltsT< 299*1e6 then
 		if C<16 then Ac('normal! '..(vim.g.Cwl and 'g' or '')..R)
 			if C==15 then Ac('normal! mk') end
-		elseif C<49 then Ac('normal! '..(math.floor(C/8))..R) vim.g.Cwl=nil 
-		elseif C<79 then Ac('normal! '..(math.floor(C/6))..R)
-		else Ac('normal! '..(math.ceil(C/6))..R) end
+		elseif C<43 then Ac('normal! '..(math.floor(C/8))..R) vim.g.Cwl=nil 
+		elseif C<85 then Ac('normal! '..(math.ceil(C/6))..R)
+		else Ac('normal! '..(math.ceil(C/4))..R) end
 		C=C+1
 		if C%5==0 then ltsT=now end
 	else Ac('normal! '..(vim.g.Cwl and 'g' or '')..R) C=1
@@ -191,10 +190,9 @@ Akm('v', 'j', [[col('.') == 1? 'k$<cmd>let g:V_B=0<CR>': 'h<cmd>let g:V_B=0<CR>'
 Akm('v', 'l', [[col('.') == col('$')-1? 'j0<cmd>let g:V_B=0<CR>' : 'l<cmd>let g:V_B=0<CR>']], { noremap=true, expr=true })
 Akm('v', 'i', 'k<cmd>let g:V_B=0<CR>', { noremap=true,silent=true })
 Akm('v', 'k', 'j<cmd>let g:V_B=0<CR>', { noremap=true,silent=true })
-Akm('n', '<C-Up>', '<C-b>', { noremap=true })
-Akm('n', '<C-Down>', '<C-f>', { noremap=true })
 Akm('n', '<Up>', '<C-u>', { noremap=true})
 Akm('n', '<Down>', '<C-d>', { noremap=true})
+Akm('n', '<C-u>', '<C-e>', {noremap=true})
 local R,C, Lc,Rc, I,S, Pt,Pre, Wrp = 0,0,0,0,0 -- Get through end points on line
 function eol(i)
 local r,c,x = unpack(vim.fn.getpos('.'),2,3)
@@ -242,7 +240,6 @@ Akm('n', '<BS>', [[col('.') == 1 ? '' : 'h"_x']], { noremap=true,expr=true })
 Akm('i', '<BS>', "col('.') == 1 ? '' : '<BS>'", { noremap=true,expr=true })
 Akm('n', '<Leader>d', '"_d', { noremap=true })
 Akm('n', 'n', '"_dd', { noremap=true, silent=true })
-
 Akm('n', '<Leader>t', 'i	<Esc>`^', {noremap=true}) --Tab
 Akm('i', '<Leader>t', '	', {noremap=true})
 Akm('n', '<M-o>', 'o', {noremap=true}) --Vim o by Alt+o
@@ -276,13 +273,18 @@ function! SSel()
 endfunction
 vnoremap / :call SSel()<CR>
 ]])
-vim.g.WDx=0;vim.g.J='' --Select (through) word string joined by .-=/\+*
-A.nvim_exec([[
+-- Selection 
+Akm('n', '<Leader><Space>', 'V', {noremap=true,silent=true})
+Akm('n', '<Leader>j', 'v', {noremap=true,silent=true})
+Akm('n', '<Leader>v', '<C-v>', {noremap=true})
+vim.g.WDx=0;vim.g.J='' --Select word, or through words string joined by .-=/\+*
+Ac([[
 function! s:wdx()
 if !g:WDx
 	let [R,C]=getpos("'<")[1:2]
 	let c=getpos("'>")[2]
 	let s=getline(R)
+	echo 'J' g:J
 	let Jno= g:J==''
 	let g:J= Jno? '[-.=/\\+*]' : '['.g:J.']'
 	let [t,b,en]=matchstrpos(s,"\\v^\\w+\\zs%((".g:J.")\\w+%(\\1\\w+)*)?", C-1)
@@ -324,21 +326,23 @@ endfunction
 function! WDX()
 	let s=getline('.') |let c=col('.')
 	if s[c-1] =~ '\w' | let g:J=''| normal! viw
-	elseif s[c-2].s[c-1].s[c] =~ '\w[-.=/\\+*]\w'
+	elseif s[c-2:c] =~ '\w[-.=/\\+*]\w'
 		exe "normal! lviw\<Esc>"
-		let g:J=matchlist(s,"\\v\\w+([-.=/\\+*])\\w+%(\\1\\w+)*.{,".(col('$')-c-strlen(expand('<cword>')))."}$")[1]
-		if g:J !='' |let g:WDx=0 |call <SID>wdx()
+		let B=match(s,"\\v\\w+\\zs([-.=/\\+*])\\w+%(\\1\\w+)*.{,".(col('$')-c-strlen(expand('<cword>')))."}$")
+		if B+1 |let g:J=s[B:B] |let g:WDx=0 |call <SID>wdx()
 	endif|endif
 endfunction
 nnoremap <silent> <Leader>y :call WDX()<CR>
-vnoremap <silent> <Leader>y :call <SID>wdx()<CR>
+vnoremap <silent> <M-y> :call <SID>wdx()<CR>
+nnoremap <Leader>6 vb
+nnoremap <Leader>7 ve
 nnoremap <silent> <Leader>3 :%s/\v\s+$//<CR>
-]], false) --^ doc trailing-space cleanup
+]]) --^ doc trailing-space cleanup
 local Sw2n, LEN,Len,R,C,r,c = nil,0,0 --2 words/selections swap
 function swS()
-  local VBlk, t, Y,X, y,x = vim.fn.mode()=='\022'
-	vim.cmd "highlight Word guibg=#00EF00 guifg=#FF00BB"
-	--vim.cmd "highlight Word ctermbg=10 ctermfg=0"
+	local VBlk, t, Y,X, y,x = vim.fn.mode()=='\022'
+	--vim.cmd "highlight Word guibg=#00EF00 guifg=#FF00BB"
+	vim.cmd "highlight Word ctermbg=10 ctermfg=0"
 	if VBlk then
 		V_C=vim.fn.virtcol({R,C})
 		V_c=vim.fn.virtcol({r,c})
@@ -420,8 +424,6 @@ function dup(S)
 end
 Akm('v', 'b', '<cmd>lua dup();vim.g.V_B=1<CR>', {noremap=true})
 Akm('v', '<Leader>b','<cmd>lua dup(1);vim.g.V_B=1<CR>', {noremap=true}) 
-Akm('n', '<Leader>6', 'vb', {noremap=true})
-Akm('n', '<Leader>7', 've', {noremap=true})
 vim.g.Lc,vim.g.Vlc=0,0 -- Letter case toggle
 Ac([[
 function! TtLc()
@@ -662,7 +664,7 @@ Akm('v', 'c', '', {noremap=true})
 
 Akm('n', '<Leader>1', '^vg_', {noremap=true})
 Akm('n', '<Leader>9', ':set hlsearch! hlsearch?<CR>',{})
-Akm('n', '<Leader>q', ':n noname<CR>', {})
+Akm('n', '<Leader>2', ':n noname<CR>', {})
 Akm('n', '<Leader>z', '<C-w>w', {noremap=true}) --Switch buffers
 O.mouse='a' -- Mouse support toggle
 vim.keymap.set({'n','i','c'}, '<F9>', '', {callback=function()
@@ -670,21 +672,40 @@ vim.keymap.set({'n','i','c'}, '<F9>', '', {callback=function()
   vim.wo.number=false O.mouse= ''; print('System/Terminal Mouse')
  else vim.wo.number=true; O.mouse= 'a'; print('Neovim Mouse') end
 end})
--- Add # lines of CLI
-vim.keymap.set({'n','i','v','c'}, '<F6>','',{callback=function()
+vim.keymap.set({'n','i','v','c'}, '<F6>','',{callback=function() -- Add # lines of CLI
   O.cmdheight = O.cmdheight<7 and O.cmdheight+1 or 1
 end})
--- show/hide line#
-Akm('n', '<F5>',':lua im.wo.number=not vim.wo.number<CR>', {noremap=true,silent=true})
+Akm('n', '<F2>',':lua im.wo.number=not vim.wo.number<CR>', {noremap=true}) --Show/hide line#
 -- Save, Exit
-vim.keymap.set({'n','v','i','c'}, '<Leader>x', '', {callback=function()
- if A.nvim_buf_get_option(A.nvim_get_current_buf(), 'modified') then  Ac('w')
- elseif #A.nvim_list_wins() >1 then Ac('q')
- elseif #vim.fn.getbufinfo( {buflisted=1}) >1 then
-  Ac('bp| bd #')
- else  Ac('q') end
-end})
-Akm('n', '<End>', ':bp<CR>', {}) -- END switch to the next/previous buffer
+Ac([[
+function! Sp(U)
+let w=winnr()
+if winlayout()[0]=='col'
+	if win_screenpos(w)[0] < win_screenpos(w+1)[0]
+		exe "normal! \<C-w>".(a:U? '-': '+')
+	else |exe "normal! \<C-w>".(a:U? '+': '-')
+	endif
+elseif winlayout()[0]=='row'
+	if w==1 |exe "normal! \<C-w>".(a:U? '<': '>')
+	else |exe "normal! \<C-w>".(a:U? '>': '<')
+	endif
+endif 
+endfunction
+nnoremap <expr> <C-Up> winnr('$')>1? ":call Sp(1)<CR>" :"<C-b>"
+nnoremap <expr> <C-Down> winnr('$')>1? ":call Sp(0)<CR>" :'<C-f>'
+nnoremap <expr> <C-Left> winnr('$')>1? ":call Sp(1)<CR>" :'<C-Left>'
+nnoremap <expr> <C-Right> winnr('$')>1? ":call Sp(0)<CR>" :'<C-Right>'
+function! Sv_Ex()
+	if &modified |w
+	elseif winnr('$')>1 |bd
+	elseif len(getbufinfo({'buflisted':1})) >1
+		 bd|let bid=bufnr('%')
+	else |q |endif
+endfunction
+]])
+vim.keymap.set({'n','v','i','c'}, '<M-m>', ':call Sv_Ex()<CR>', {noremap=true,silent=true})
+Akm('n', '<Leader>c', "<C-w>w:bd|bufdo if bufnr('%')!=bufnr() |bd|endif<CR>", {noremap=true,silent=true})
+Akm('n', '<End>', ':bp<CR>', {noremap=true,silent=true}) --END switch to the next/previous buffer
 
 function bg256co()
 local B = A.nvim_create_buf(nil, 1)  -- new, unlisted, scratch/temporary buffer
