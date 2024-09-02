@@ -120,9 +120,10 @@ Akm('i', '<Leader>h', "<C-o>:lua if PreT then if Hld then Tmr:stop();inT1=nil;Hl
 Akm('n', '<Leader>h', "col('.')<col('$')-1? '' :'<cmd>lua Last=vim.loop.hrtime()<CR>i'", {expr=true,noremap=true})
 Akm('v', '<Leader>i', [[mode()=="\<C-v>" ? '<cmd>lua Last=vim.loop.hrtime()<CR>I': '']],{expr=true,noremap=true})
 Akm('n', 's', '<cmd>lua Last=vim.loop.hrtime()<CR>"_s', {noremap=true})
--- Normal's ENTER like Insert's, its Alt drops current line down
+-- Normal's ENTER like Insert's, Leader ENTER drops current line down
 Akm('n', '<CR>', 'i<CR><Esc>', {noremap=true,silent=true})
-Akm('n', '<M-CR>', "col('.')<col('$')-1? 'kA<CR><Space><BS><Esc>': 'a<CR><Esc>'", {expr=true,noremap=true})
+Akm('n', '<Leader><CR>', 'kA<CR><Space><BS><Esc>', {noremap=true})
+Akm('n', '<M-CR>', "col('.')<col('$')-1? 'i<CR><Esc>k$': 'a<CR>.<BS>'", {expr=true,noremap=true})
 Akm('v', '<CR>', "g:V_B? '<Esc>' :'d'", {expr=true,noremap=true})
 -- INS is into replace mode, toggling there. else does ESC/exit
 Akm('n', '<Insert>', ':lua Last=vim.loop.hrtime()<CR>R', {noremap=true})
@@ -272,6 +273,14 @@ function! SSel()
 	cnoremap <M-CR> <CR>:call EdE()<CR>
 endfunction
 vnoremap / :call SSel()<CR>
+function! SSel()
+  let [R,C,r,c] = getpos("'<")[1:2]+getpos("'>")[1:2]
+	if R!=r |echo "Can't be Multi-line"| return|endif
+  call feedkeys('/'.getline(R)[C-1:c-1], 'nt')
+  set hlsearch
+	cnoremap <M-CR> <CR>:call EdE()<CR>
+endfunction
+vnoremap ? :call SubS()<CR>
 ]])
 -- Selection 
 Akm('n', '<Leader><Space>', 'V', {noremap=true,silent=true})
@@ -336,8 +345,7 @@ nnoremap <silent> <Leader>y :call WDX()<CR>
 vnoremap <silent> <M-y> :call <SID>wdx()<CR>
 nnoremap <Leader>6 vb
 nnoremap <Leader>7 ve
-nnoremap <silent> <Leader>3 :%s/\v\s+$//<CR>
-]]) --^ doc trailing-space cleanup
+]])
 local Sw2n, LEN,Len,R,C,r,c = nil,0,0 --2 words/selections swap
 function swS()
 	local VBlk, t, Y,X, y,x = vim.fn.mode()=='\022'
@@ -371,8 +379,8 @@ function swS()
 	end
 	vSl=nil
 end
-Akm('n', '<Leader><CR>', ':lua swS()<CR>', {noremap=true})
-Akm('v', '<Leader><CR>', '<cmd>lua vSl=1;swS()<CR>', {})
+Akm('n', '<Leader>P', ':lua swS()<CR>', {noremap=true})
+Akm('v', '<Leader>P', '<cmd>lua vSl=1;swS()<CR>', {})
 -- Duplicate line or selection
 Akm('n', 'b', ':t.<CR>', {})
 function dup(S)
@@ -505,10 +513,14 @@ if VBlk then
 	Ac('normal! v'..(r-1)..'G'..vim.fn.virtcol({r-1,co})..'|')
 else
 	s=A.nvim_buf_get_text(0, R-1, C-1, r-1, c, {})
-	A.nvim_buf_set_text(0, R-1, C-1, r-1, c, {})
+	e=vim.fn.col({r,c})==vim.fn.col({r,'$'})
+	A.nvim_buf_set_text(0, R-1, C-1, r-1, e and c-1 or c, {})
+	if e then
+		A.nvim_buf_set_lines(0, R-1, R, true, {}) table.insert(s,'') end
 	if vim.fn.virtcol({R-1, '$'})<V_C then
 		co=vim.fn.col({R-1,'$'})
 	else co=C+V_C - vim.fn.virtcol({R-1,C}) end
+	co=co<1 and 1 or co
 	A.nvim_buf_set_text(0, R-2, co-1, R-2, co-1, s)
 	Ac('normal! '..(R-1)..'G'..vim.fn.virtcol({R-1,co})..'|v'
 	..(r-1)..'G'..vim.fn.virtcol({r-1,c})..'|')
@@ -516,9 +528,9 @@ end vim.g.V_B=1
 end
 Akm('n', 'I', ':m .-2<CR>', {noremap=true,silent=true})
 Akm('v', 'I', [[mode()=='V'? ":let g:V_B=1|<C-u>'<-1m '><CR>gv=gv": '<cmd>lua slUP()<CR>']], {noremap=true,expr=true,silent=true})
--- Move line/selected down
+-- Move line/selected down--print( 'VBLK', VBlk)
 function slDN()
-local VBlk, blk, l, s, co, V_C, V_c, wd, base,t = vim.fn.mode()=='\022', {}
+local VBlk, blk, l, s, co, V_C, V_c, wd, base,t,e = vim.fn.mode()=='\022', {}
 Ac('normal! \027')
 local _, R,C = unpack(vim.fn.getpos("'<"))
 local _, r,c = unpack(vim.fn.getpos("'>"))
@@ -553,10 +565,15 @@ if VBlk then
 	Ac('normal! v'..(r+1)..'G'..vim.fn.virtcol({r+1,co})..'|')
 else
 	s=A.nvim_buf_get_text(0, R-1, C-1, r-1, c, {})
-	A.nvim_buf_set_text(0, R-1, C-1, r-1, c, {})
+	e=vim.fn.col({r,c})==vim.fn.col({r,'$'})
+	A.nvim_buf_set_text(0, R-1, C-1, r-1, e and c-1 or c, {})
+	if e then
+		A.nvim_buf_set_lines(0, R-1, R, true, {}) table.insert(s,'')
+	end
 	if vim.fn.virtcol({R+1,'$'})<V_C then
 		co=vim.fn.col({R+1,'$'})
 	else co= C+V_C -vim.fn.virtcol({R+1,C}) end
+	co=co<1 and 1 or co
 	A.nvim_buf_set_text(0, R, co-1, R, co-1, s)
 	Ac('normal! '..(R+1)..'G'..vim.fn.virtcol({R+1,co})..'|v'
 	..(r+1)..'G'..vim.fn.virtcol({r+1,c})..'|')
@@ -698,11 +715,12 @@ nnoremap <expr> <C-Right> winnr('$')>1? ":call Sp(0)<CR>" :'<C-Right>'
 function! Sv_Ex()
 	if &modified |w
 	elseif winnr('$')>1 |bd
-	elseif len(getbufinfo({'buflisted':1})) >1
-		 bd|let bid=bufnr('%')
+	elseif len(getbufinfo({'buflisted':1})) >1 |bd |let bid=bufnr('%')
 	else |q |endif
 endfunction
+nnoremap <silent> <Leader>3 :%s/\v\s+$//<CR>
 ]])
+--^ doc trailing-space cleanup
 vim.keymap.set({'n','v','i','c'}, '<M-m>', ':call Sv_Ex()<CR>', {noremap=true,silent=true})
 Akm('n', '<Leader>c', "<C-w>w:bd|bufdo if bufnr('%')!=bufnr() |bd|endif<CR>", {noremap=true,silent=true})
 Akm('n', '<End>', ':bp<CR>', {noremap=true,silent=true}) --END switch to the next/previous buffer
