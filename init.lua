@@ -1,5 +1,5 @@
 A =vim.api
-local O,o = vim.o,vim.opt
+local O,o= vim.o, vim.opt
 local Akm, Ac = A.nvim_set_keymap, A.nvim_command
 local Inp, Afk,Trm = A.nvim_input, A.nvim_feedkeys,A.nvim_replace_termcodes
 --[[local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -40,7 +40,7 @@ autocmd InsertEnter * highlight CursorLine ctermfg=NONE ctermbg=236 cterm=underl
 autocmd InsertEnter * highlight CursorLineNr ctermbg=19 ctermfg=yellow
 ]],false)
 --]=]
--- no auto comment, cursor at last position at scr center, leader key TO, etc
+-- no auto comment, cursor at last position at center, tab/indent spc, leader key TO, etc
 A.nvim_exec([[
 autocmd FileType * setlocal formatoptions-=cro
 autocmd VimLeavePre * let @c = &cmdheight
@@ -51,17 +51,14 @@ autocmd VimEnter * let &cmdheight= @c
 	set breakindentopt=shift:0
 	set number
 	set whichwrap+=<,>,[,],l
-	highlight TrWSpc ctermbg=241 guibg=#494949
-	match TrWSpc /\s\+$/
+	highlight TrWSp ctermbg=241 guibg=#494949
+	match TrWSp /\s\+$/
 autocmd CmdlineLeave * if getcmdtype()=~'[/?]' |call searchcount() |endif
 autocmd InsertEnter * set timeoutlen=199
 autocmd InsertLeave * set timeoutlen=449 |autocmd TextChangedI * lua sTmrK()
 autocmd InsertCharPre * lua navK()
 autocmd TextChangedI * lua sTmrK()
-autocmd BufReadPost * if line("'\"")>0 && line("'\"") <=line('$') |exe "normal! g`\"zz\<C-y>" |endif
-]],false)
---"set showbreak=⮡
---"autocmd ModeChanged [vV\x16]:* let g:kmV_B=0
+autocmd BufReadPost * if line("'\"")>0 && line("'\"") <=line('$') |exe "normal! g`\"zz\<C-y>" |endif ]],false)
 o.clipboard:append('unnamedplus')
 --[=[ A.nvim_exec([[
 if vim.fn.has('win32') then
@@ -76,13 +73,12 @@ name = 'win32yank',
 	['*'] ='win32yank.exe -o --lf',
 	},
 	cache_enabled=0 }
-end]])
-]=]
+end]]) ]=]
 vim.g.mapleader=' ' --spacebar is leader key --vim.g.maplocalleader = "9"
 O.guicursor='n-v-sm-i-ci-ve:block,i:ver49-iCursor,r:hor49,a:blinkoff99-blinkon710-Cursor/lCursor'
 
 Akm('v', '<Esc>', '<cmd>let g:WDx=0<CR><Esc>', {noremap=true,silent=true})
-local preK, lasT,C = '',0,1 -- Fast repetitive nav. keys in Insert will exit it
+local preK, lasT,C = '',0,1 -- Fast repetitive nav. and ; keys in Insert will exit it
 function navK()
 local now,k= vim.loop.hrtime(), vim.v.char
 if preK==k and k:match('[jlki;]') then C=C+1
@@ -116,11 +112,11 @@ function sTmrK() -- Timer to auto exit Insert
 	end)
 	Last=now; PreT=t
 end
--- Normal's ENTER like Insert's, Leader ENTER drops current line down
+-- In Normal leader ENTER drops current line down, ENTER is like in Insert
 Akm('n', '<CR>', 'i<CR><Esc>', {noremap=true,silent=true})
 Akm('n', '<Leader><CR>', 'kA<CR><Space><BS><Esc>', {noremap=true})
 Akm('n', '<M-CR>', "col('.')<col('$')-1? 'i<CR><Esc>k$': 'a<CR>.<BS><Esc>'", {expr=true,noremap=true})
-Akm('v', '<CR>', [[g:kmV_B? '<Esc>:let g:kmV_B=0<CR>' :'d']], {expr=true,noremap=true})
+Akm('v', '<CR>', [[g:kmV_B? '<Esc>:let g:kmV_B=0<CR>' :'d']], {expr=true,noremap=true,silent=true})
 vim.g.kmV_B=0
 Hld=1 -- h into Insert mode, Leader h toggle to keep/clear auto exit
 Akm('n', 'h', "col('.')<col('$')-1? ':lua Last=vim.loop.hrtime();PreT=nil<CR>i' :':lua Last=vim.loop.hrtime();PreT=nil<CR>a'", {expr=true,noremap=true,silent=true})
@@ -141,12 +137,12 @@ Akm('v', '<Space>', [[mode()=='v'? '<C-v>': mode()=="\<C-v>"? 'V' :'<C-v>']], {e
 --Akm('n', '<C-Space>', "col('.')<col('$')-1? '': 'i <Esc>`^'", {expr=true,noremap=true}) --GUI
 Akm('n', '<M-Space>', "col('.')<col('$')-1? '': 'i <Esc>`^'", {expr=true,noremap=true})
 -- p behaves P except at EOL, vice versa P behaves p, in visual it'll swap selc./register
-local virC=vim.fn.virtcol
+Vf=vim.fn virC=vim.fn.virtcol
 function nlP(E)
 local l, s,t = {}
-local _,R,C=unpack(vim.fn.getpos('.'))
-t=vim.fn.getregtype("")
-s=vim.fn.getreg("")
+local _,R,C=unpack(Vf.getpos('.'))
+t=Vf.getregtype("")
+s=Vf.getreg("")
 if E or t=='V' then
 	if string.sub(t,1,1)=='\022' then
 		if E>1 then
@@ -168,12 +164,13 @@ else
 	end
 end
 end
+--"" "0 "1 "3 "4 "5 "6 "7 "8 "a "b "c "d "k "l "o "v "z "- "* "+ ": "% "/
 Akm('n', 'p', [[ getline('.') !~ "\\S" || col('.')<col('$')-1? getregtype("")=~'^[\x16]'? 'P`['.nr2char(22).'`]' : getregtype("")=~'V'? 'Pl`['.getregtype("").'`]=<Esc>' :'Pl' : ':lua nlP(1)<CR>']], {expr=true,noremap=true,silent=true})
 Akm('n','P','pl',{noremap=true,silent=true})
-Akm('v', 'p', [[mode()=='V'? 'p': getregtype("")=='v'? col('.')<col('$')-1? '"_xPl': '"_xpl': '"_x<cmd>lua nlP(2)<CR>']], {expr=true,noremap=true,silent=true})
+Akm('v', 'p', [[mode()=='V'? 'P': getregtype("")=='v'? col('.')<col('$')-1? '"_xPl': '"_xpl': '"_x<cmd>lua nlP(2)<CR>']], {expr=true,noremap=true,silent=true})
 Akm('v','P', [[getregtype("")=~'^[\x16]'? '"_x<cmd>:lua nlP(0)<CR>': 'pl']] ,{expr=true,noremap=true})
-Akm('n', '<Leader>p', [[col('.')<col('$')-1? ':lua nlP()<CR>': ':lua nlP(0)<CR>']], {expr=true,noremap=true,silent=true})
-Akm('n', '<Leader>P', [[getregtype("")[0]==nr2char(22)? ':lua nlP(2)<CR>':'']], {expr=true,noremap=true,silent=true})
+Akm('n', '<Leader>p', [[col('.')<col('$')-1 || empty(matchstr(getline('.'), '\S'))? ':lua nlP()<CR>': ':lua nlP(0)<CR>']], {expr=true,noremap=true,silent=true})
+Akm('n', '<Leader><C-p>', [[getregtype("")[0]==nr2char(22)? ':lua nlP(2)<CR>':'']], {expr=true,noremap=true,silent=true})
 Akm('n', '<Leader>4', [['`['.getregtype("").'`]']], {expr=true})
 vim.g.Cwl=nil
 -- Navigator
@@ -198,28 +195,30 @@ Akm('n', 'i', ":lua iScrl('k')<CR>", {noremap=true,silent=true})
 Akm('n', 'k', ':lua iScrl()<CR>', {noremap=true,silent=true})
 Akm('v', 'j', [[col('.') == 1? 'k$<cmd>let g:kmV_B=0<CR>': 'h<cmd>let g:kmV_B=0<CR>']], {noremap=true,expr=true})
 Akm('v', 'l', [[col('.') == col('$')-1? 'j0<cmd>let g:kmV_B=0<CR>' : 'l<cmd>let g:kmV_B=0<CR>']], { noremap=true, expr=true })
-Akm('v', 'i', 'k<cmd>let g:kmV_B=0<CR>', { noremap=true,silent=true })
-Akm('v', 'k', 'j<cmd>let g:kmV_B=0<CR>', { noremap=true,silent=true })
-Akm('n', '<Up>', '<C-u>', { noremap=true})
-Akm('n', '<Down>', '<C-d>', { noremap=true})
-Akm('n', '<C-u>', '<C-e>', {noremap=true})
+Akm('v', 'i', 'k<cmd>let g:kmV_B=0<CR>', {noremap=true,silent=true})
+Akm('v', 'k', 'j<cmd>let g:kmV_B=0<CR>', {noremap=true,silent=true})
+--Akm('n', '<C-u>', '<C-e>', {noremap=true})
+Akm('n', '<C-o>', '<C-e>', {noremap=true})
+Akm('n', '<C-h>', '<C-e>', {noremap=true})
+Akm('n', '<Up>', '<C-u>', {noremap=true})
+Akm('n', '<Down>', '<C-d>', {noremap=true})
 local R,C, Lc,Rc, I,S, Pt,Pre, Wrp = 0,0,0,0,0 -- Get through end points on line
 function eol(i)
-local r,c,x = unpack(vim.fn.getpos('.'),2,3)
+local r,c,x = unpack(Vf.getpos('.'),2,3)
 if i~=Pre or r~=R or c~=Pt then
-	Wrp= Wrp and Wrp or vim.fn.winwidth(0)-vim.opt.numberwidth:get()
+	Wrp= Wrp and Wrp or Vf.winwidth(0)-vim.opt.numberwidth:get()
 	if r==R and (c<=Lc or Rc<=c) then c=C end
 	if i then S={'^','0', virC({r,c})..'|','g_','$'}
 	else
 		S={'g_','$', virC({r,c})..'|','^','0'}
-		for e= Wrp,vim.fn.col('$'), Wrp do table.insert( S,3,e..'|') end
+		for e= Wrp,Vf.col('$'), Wrp do table.insert( S,3,e..'|') end
 	end
-	vim.g.Cwl= Wrp<vim.fn.col('$') and 1 or nil
+	vim.g.Cwl= Wrp<Vf.col('$') and 1 or nil
 	I=0; R=r;C=c; Pre=i; Pt=0
 end
 while	1 do I=I+1
 	Ac( 'normal! '..S[I])
-	x=vim.fn.col('.')
+	x=Vf.col('.')
 	if I==1 then if i then Lc=x else Rc=x end
 	elseif I==4 then if i then Rc=x else Lc=x end end
 	if x~=Pt then Pt=x break end
@@ -254,8 +253,10 @@ Akm('n', 'n', '"_dd', { noremap=true, silent=true })
 Akm('n', '<Leader>t', 'i	<Esc>`^', {noremap=true}) --Tab
 Akm('i', '<Leader>t', '	', {noremap=true})
 Akm('n', '<M-o>', 'o', {noremap=true}) --Vim o by Alt+o
-Akm('n', 'd', 'mld', { noremap=true })
-Akm('n', 'y', 'mly', { noremap=true })
+Akm('n', 'd', 'mld', {noremap=true})
+Akm('n', 'y', 'mly', {noremap=true})
+Akm('v', 'd', 'mld', {noremap=true})
+Akm('v', 'y', 'mly', {noremap=true})
 -- Search. Alt+BACKSP clears cmd entry
 Ac([[
 cnoremap <M-BS> <C-u>
@@ -299,7 +300,7 @@ Akm('n', '<Leader>j', 'v', {noremap=true,silent=true})
 Akm('n', '<Leader>v', '<C-v>', {noremap=true})
 vim.g.WDx=0;vim.g.J='' --Select word, or through words string joined by .-=/\+*
 Ac([[
-function! s:wdx()
+function! s:wdSl()
 if !g:WDx
 	let [R,C]=getpos("'<")[1:2]
 	let c=getpos("'>")[2]
@@ -349,17 +350,61 @@ function! WDX()
 	elseif s[c-2:c] =~ '\w[-.=/\\+*]\w'
 		exe "normal! lviw\<Esc>"
 		let B=match(s,"\\v\\w+\\zs([-.=/\\+*])\\w+%(\\1\\w+)*.{,".(col('$')-c-strlen(expand('<cword>')))."}$")
-		if B+1 |let g:J=s[B:B] |let g:WDx=0 |call <SID>wdx()
+		if B+1 |let g:J=s[B:B] |let g:WDx=0 |call <SID>wdSl()
 	endif|endif
 endfunction
 nnoremap <silent> <Leader>y :call WDX()<CR>
-vnoremap <silent> <M-y> :call <SID>wdx()<CR>
+vnoremap <silent> <M-y> :call <SID>wdSl()<CR>
 nnoremap <Leader>6 vb
 nnoremap <Leader>7 ve
 ]])
+vim.g.Lc,vim.g.Vlc=0,0 -- Letter case toggle
+Ac([[
+function! TtLc()
+let [R,C]=getpos("'<")[1:2]
+let [r,c]=getpos("'>")[1:2]
+let l=getline(R)
+normal! u
+if R!=r
+	let s= substitute( l[C-1:], '\v<(\a)(\w*)','\U\1\L\2', 'g')
+	call setline( R, l[:C-1].s)
+	for i in range( R+1, r-1)
+		let s= substitute( getline(i), '\v<(\a)(\w*)','\U\1\L\2', 'g')
+		call setline( i,s)
+	endfor
+	let l=getline(r)
+	let s= substitute( l[:c-1], '\v<(\a)(\w*)','\U\1\L\2', 'g')
+	call setline( r, s.l[c-1:])
+else
+	let s= substitute( l[C-1:c-1], '\v<(\a)(\w*)','\U\1\L\2', 'g')
+	call setline( R, (C-1? l[:C-2]:'').s.l[c:])
+	endif
+	endfunction
+	let [s:i,s:y,s:x]=[0,0,0]
+	function! LtrC()
+	if !g:Lc
+		let s:S=[ 'gv~', 'gvgU', 'gvgu', 'call TtLc()', '' ]
+		let [s:y,s:x]=getpos('.')[1:2]
+		let s:i=0
+		let g:Lc=1
+		nnoremap u u:let g:Lc=0\|let g:Vlc=0\|nunmap u<CR>
+		endif
+		let [l,f]=getpos('.')[1:2]
+		if s:y!=l ||s:x!=f
+			let s:y=l |let s:x=f |let s:i=0 |normal! gv
+		endif
+		let K='normal! '
+		if s:i
+			if s:i==3 |let K='' |else |let K.='u' |endif|endif
+			exe K.s:S[s:i].(g:Vlc? (s:i==3? '|normal! ':'').'gv': '')
+			let s:i+=1 |let s:i %= 5
+endfunction
+nnoremap <expr><silent> gu getline('.')[col('.')-1]=~'\w'? 'viw:<C-u>call LtrC()<CR>' :''
+vnoremap <silent> gu :<C-u>let g:Vlc=1\|call LtrC()<CR>
+]])
 local Sw2n, LEN,Len,R,C,r,c = nil,0,0 --2 words/selections swap
 function swS()
-	local VBlk, t, Y,X, y,x = vim.fn.mode()=='\022'
+	local VBlk, t, Y,X, y,x = Vf.mode()=='\022'
 	--vim.cmd "highlight Word guibg=#00EF00 guifg=#FF00BB" --GUI
 	vim.cmd "highlight Word ctermbg=10 ctermfg=0"
 	if VBlk then
@@ -367,8 +412,8 @@ function swS()
 		V_c=virC({r,c})
 	elseif Sw2n then
 		Ac('normal! '..(vSl and '' or 'viw')..'\027')
-		_,Y,X = unpack(vim.fn.getpos("'<"))
-		_,y,x = unpack(vim.fn.getpos("'>"))
+		_,Y,X = unpack(Vf.getpos("'<"))
+		_,y,x = unpack(Vf.getpos("'>"))
 		t=A.nvim_buf_get_text(0, Y-1,X-1, y-1,x, {})
 		for _,s in ipairs(t) do Len=Len+#s end
 		Ac('normal! gvP')
@@ -381,8 +426,8 @@ function swS()
 		Sw2n=nil
 	else LEN=0; Len=0
 		Ac('normal! '..(vSl and 'y' or 'viwy'))
-		_,R,C = unpack(vim.fn.getpos("'<"))
-		_,r,c = unpack(vim.fn.getpos("'>"))
+		_,R,C = unpack(Vf.getpos("'<"))
+		_,r,c = unpack(Vf.getpos("'>"))
 		t=A.nvim_buf_get_text(0, R-1,C-1, r-1,c, {})
 		for _,s in ipairs(t) do LEN=LEN+#s end
 		A.nvim_buf_add_highlight(0,-1, 'Word', R-1, C-1, C-1+LEN)
@@ -392,141 +437,107 @@ function swS()
 end
 Akm('n', '<Leader>P', ':lua swS()<CR>', {noremap=true})
 Akm('v', '<Leader>P', '<cmd>lua vSl=1;swS()<CR>', {})
+--function swGSR()
+--vim.cmd[[let a= nr2char(getchar()) |let b= nr2char(getchar())]]
+--vim.cmd[[exe '.,+57s/\v<('.a.')|('.b.')>/\=submatch(1)==""? "'.a.'":"'.b.'"/g']]
+--end
 -- Duplicate line or selection
-Akm('n', 'b', ':t.<CR>', {})
+Akm('n', 'b', ':t.<CR>', {noremap=true})
 function dup(S)
-	local VBlk, isVL, blk, of, nl, t, b,d= vim.fn.mode()=='\022', vim.fn.mode()=='V', {}, 0,0
-	Ac('normal! \027')
-	local _, R,C = unpack(vim.fn.getpos("'<"))
-	local _, r,c = unpack(vim.fn.getpos("'>"))
-	V_C=virC({R,C})
-	V_c=virC({r,c})
-	if VBlk then
-		if V_C>V_c then
-			wd=V_C-V_c
-			C= c+V_c-virC({R,c})
-			V_C=virC({R,C})
-		else wd=V_c-V_C end
-		for i= R,r do
-			d=C+V_C-virC({i, C})
-			table.insert(blk, vim.fn.getline(i):sub( d,d+wd))
-		end
-		C=C+wd+1
-		b=C+virC({R,C})
-		for i,l in ipairs(blk) do
-			if S then C=1
-				A.nvim_buf_set_text(0, R-2+i, 0, R-2+i, 0, {l,''})
-			else
-				d=b-virC({R-1+i,C})-1
-				A.nvim_buf_set_text(0, R-2+i, d, R-2+i, d, {l}) end
-		end
-		Ac('normal! '..R..'G'..virC({R,C})..'|')
-		A.nvim_input('\\<C-v>')
-		c=C+wd
-		d=c+virC({R,c})-virC({r,c})
-		Ac('normal! v'..r..'G'..virC({r,d})..'|')
-	else
-		c= isVL and vim.fn.col({r,'$'})-1 or c
-		t= A.nvim_buf_get_text(0, R-1,C-1, r-1, c, {})
-		d=c+1
-		if R==r then of=c
-		elseif C==1 then table.insert(t,1,'') -- prepend newline
-			nl=1 ;d=1 end
-		c= c==vim.fn.col('$') and c-1 or c -- don't get newline col
-		A.nvim_buf_set_text(0, r-1,c, r-1,c, t)
-		l=r+nl
-		Ac('normal! '..l..'G'..virC({l,d})..'|')
-		r=l+r-R
-		c=isVL and '$' or of+#t[#t]
-		Ac('normal! v'..r..'G'..virC({r, vim.fn.col({r,c})})..'|')
-	end
-end
-Akm('v', 'b', '<cmd>lua dup();vim.g.kmV_B=1<CR>', {noremap=true})
-Akm('v', '<Leader>b','<cmd>lua dup(1);vim.g.kmV_B=1<CR>', {noremap=true})
-vim.g.Lc,vim.g.Vlc=0,0 -- Letter case toggle
-Ac([[
-function! TtLc()
-	let [R,C]=getpos("'<")[1:2]
-	let [r,c]=getpos("'>")[1:2]
-	let l=getline(R)
-	normal! u
-	if R!=r
-		let s= substitute( l[C-1:], '\v<(\a)(\w*)','\U\1\L\2', 'g')
-		call setline( R, l[:C-1].s)
-		for i in range( R+1, r-1)
-			let s= substitute( getline(i), '\v<(\a)(\w*)','\U\1\L\2', 'g')
-			call setline( i,s)
-		endfor
-		let l=getline(r)
-		let s= substitute( l[:c-1], '\v<(\a)(\w*)','\U\1\L\2', 'g')
-		call setline( r, s.l[c-1:])
-	else
-		let s= substitute( l[C-1:c-1], '\v<(\a)(\w*)','\U\1\L\2', 'g')
-		call setline( R, (C-1? l[:C-2]:'').s.l[c:])
-	endif
-endfunction
-let [s:i,s:y,s:x]=[0,0,0]
-function! LtrC()
-if !g:Lc
-	let s:S=[ 'gv~', 'gvgU', 'gvgu', 'call TtLc()', '' ]
-	let [s:y,s:x]=getpos('.')[1:2]
-	let s:i=0
-	let g:Lc=1
-	nnoremap u u:let g:Lc=0\|let g:Vlc=0\|nunmap u<CR>
-endif
-let [l,f]=getpos('.')[1:2]
-if s:y!=l ||s:x!=f
-	let s:y=l |let s:x=f |let s:i=0 |normal! gv
-endif
-let K='normal! '
-if s:i
-	if s:i==3 |let K='' |else |let K.='u' |endif|endif
-exe K.s:S[s:i].(g:Vlc? (s:i==3? '|normal! ':'').'gv': '')
-let s:i+=1 |let s:i %= 5
-endfunction
-nnoremap <expr><silent> gu getline('.')[col('.')-1]=~'\w'? 'viw:<C-u>call LtrC()<CR>' :''
-vnoremap <silent> gu :<C-u>let g:Vlc=1\|call LtrC()<CR>
-]])
--- Move visual char/block up
-function slUP()
-local VBlk, e,l, V_C,V_c, Vwd,d,iC,ic,nc,V =vim.fn.mode()=='\022',0
-Ac('normal! \027')
-local _, R,C = unpack(vim.fn.getpos("'<"))
-local _, r,c = unpack(vim.fn.getpos("'>"))
+local VBlk, isVL, s, of, nl, t, b,d,Vwd= Vf.mode()=='\022', Vf.mode()=='V', '', {}, 0,0
+Ac('normal! \027') 
+local _, R,C = unpack(Vf.getpos("'<"))
+local _, r,c = unpack(Vf.getpos("'>"))
 V_C=virC({R,C})
 V_c=virC({r,c})
 if VBlk then
 	if V_C>V_c then
-		Vwd=V_C-V_c
-		C= c+V_c-virC({R,c})
-		V_C=virC({R,C})
-		c=c+Vwd
-		V_c=virC({r,c})
-	else Vwd=V_c-V_C end
+		t= c+V_c-virC({R,c}) t= t+V_c-virC({R,t})
+		c= C+V_C-virC({r,C}) c= c+V_C-virC({r,c}) C=t
+		V_C=virC({R,C}) V_c=virC({r,c})
+	end
+	Vwd=V_c-V_C
+	--s=string.rep(' ',A.nvim_get_option('tabstop'))
+	h=math.floor(V_C/2) H=math.floor(V_c/2)
+	if S then n=r
+		for i= R,r do
+			iC= h+ V_C-virC({ i,h}) iC= iC+ V_C-virC({ i,iC})
+			ic= H+ V_c-virC({ i,H}) ic= ic+ V_c-virC({ i,ic})
+			Vf.append( n, string.sub( Vf.getline(i),iC,ic))
+			n=n+1
+		end
+		Ac('normal! '..(r+1)..'G'..'1|\022'..n..'G'..(1+Vwd)..'|')
+	else
+		for i= R,r do
+			iC= h+ V_C-virC({ i,h}) iC= iC+ V_C-virC({ i,iC})
+			ic= H+ V_c-virC({ i,H}) ic= ic+ V_c-virC({ i,ic})
+			l=Vf.getline(i)
+			--Vf.setline( i,string.sub( l,1,ic)..(string.gsub(string.sub( l,iC,ic),'[\09]',s))..string.sub( l,ic+1))
+			Vf.setline( i,string.sub( l,1,ic)..string.sub( l,iC,ic)..string.sub( l,ic+1))
+		end
+		Ac('normal! '..R..'G'..(V_c+1)..'|\022'..r..'G'..(V_c+1+Vwd)..'|')
+	end
+else
+	if isVL then
+		if R==r then vim.cmd[[ let C=match(getline('.'), '\S')
+			let c=match(getline('.'), '\S\zs\s*$')]]
+			C=Vf.eval('C')+1
+			c=Vf.eval('c')
+		else c=Vf.col({r,'$'})-1 end
+	end
+	s=A.nvim_buf_get_text(0, R-1,C-1, r-1,c, {})
+	d=c+1
+	if R==r then of=c
+	elseif C==1 then
+		table.insert( s,1,'') d=1;nl=1 end
+	c=c==Vf.col('$') and c-1 or c		-- avoid newline col
+	A.nvim_buf_set_text(0, r-1,c, r-1,c, s)
+	l=r+nl
+	r=l+r-R
+	Ac('normal! '..l..'G'..virC({l,d})..'|v'..r..'G'..virC({r, Vf.col({r,isVL and '$' or of+#s[#s]})})..'|o')
+end
+end
+Akm('v', 'b', '<cmd>lua dup();vim.g.kmV_B=1<CR>', {noremap=true})
+Akm('v', '<Leader>b','<cmd>lua dup(1);vim.g.kmV_B=1<CR>', {noremap=true})
+-- Move visual char/block up
+function slUP()
+local VBlk, e,l, V_C,V_c, Vwd,d,iC,ic,nc,V =Vf.mode()=='\022',0
+Ac('normal! \027')
+local _, R,C = unpack(Vf.getpos("'<"))
+local _, r,c = unpack(Vf.getpos("'>"))
+V_C=virC({R,C})
+V_c=virC({r,c})
+if VBlk then
+	if V_C>V_c then
+		t= c+V_c-virC({R,c}) t= t+V_c-virC({R,t})
+		c= C+V_C-virC({r,C}) c= c+V_C-virC({r,c}) C=t
+		V_C=virC({R,C}) V_c=virC({r,c})
+	end
+	Vwd=V_c-V_C
 	s=string.rep(' ',A.nvim_get_option('tabstop'))
+	h=math.floor(V_C/2) H=math.floor(V_c/2)
 	for i=R,r do
-		iC=C+V_C -virC({i,C}) iC=iC +V_C -virC({i,iC})
-		nC=C+V_C -virC({i-1,C}) nC=nC +V_C -virC({i-1,nC})
-		ic= c +V_c -virC({i,c})
-		ic= ic +V_c -virC({i,ic})
-		l=vim.fn.getline(i)
+		iC= h+ V_C-virC({ i,h}) iC= iC+ V_C-virC({ i,iC})
+		ic= H+ V_c-virC({ i,H}) ic= ic+ V_c-virC({ i,ic})
+		tC= h+ V_C-virC({i-1,h}) tC= tC +V_C -virC({i-1, tC})
+		l=Vf.getline(i)
 		l=string.sub( l,1,iC-1)..(string.gsub(string.sub( l,iC,ic),'[\09]',s))..string.sub( l,ic+1)
-		vim.fn.setline(i,l)
-		d=V_C-virC({i-1,'$'})
-		e=vim.fn.col({i-1,'$'})-1
-		if d>0 then A.nvim_buf_set_text(0, i-2,e, i-2,e, {string.rep(' ',d)}) end
+		Vf.setline(i,l) d= V_C -virC({i-1,'$'})
+		if d>0 then
+			e=Vf.col({i-1,'$'})-1
+			A.nvim_buf_set_text(0, i,e, i,e, {string.rep(' ',d)}) end
 		A.nvim_buf_set_text(0, i-1, iC-1, i-1, iC+Vwd, {})
-		A.nvim_buf_set_text(0, i-2, nC-1, i-2, nC-1, {string.sub( l,iC,iC+Vwd)})
+		A.nvim_buf_set_text(0, i-2, tC-1, i-2, tC-1, {string.sub( l,iC,iC+Vwd)})
 	end
 	Ac('normal! '..(R-1)..'G'..V_C..'|\022'..(r-1)..'G'..V_c..'|')
 else
 	s=A.nvim_buf_get_text(0, R-1, C-1, r-1, c, {})
-	e=c==vim.fn.col({r,'$'})
+	e=c==Vf.col({r,'$'})
 	A.nvim_buf_set_text(0, R-1, C-1, r-1,e and c-1 or c, {})
 	if e then
 		table.insert(s,'') Ac(R..','..(R+1)..'join') end
 	if virC({R-1, '$'})<V_C then
-		e=vim.fn.col({R-1,'$'})
+		e=Vf.col({R-1,'$'})
 	else
 		e= C+V_C-virC({R-1,C}) e=e+V_C-virC({R-1,e}) end
 	A.nvim_buf_set_text(0, R-2, e-1, R-2, e-1, s)
@@ -534,47 +545,46 @@ else
 end vim.g.kmV_B=1
 end
 Akm('n', 'I', ':m .-2<CR>', {noremap=true,silent=true})
-Akm('v', 'I', [[mode()=='V'? ":<C-u>'<-1m '>|let g:kmV_B=1<CR>gv=gv": '<cmd>lua slUP()<CR>']], {noremap=true,expr=true,silent=true})
+Akm('v', 'I', [[mode()=='V'? ":<C-u>'<-1m '>|let g:kmV_B=1<CR>gv=gv": '<cmd>lua slUP()<CR>']], {expr=true,noremap=true,silent=true})
 -- Move visual char/block down
 function slDN()
-local VBlk, e,l, V_C,V_c, Vwd,d,iC,ic,nc,V =vim.fn.mode()=='\022',0
+local VBlk, e,l, V_C,V_c, Vwd,d,iC,ic,nc,V =Vf.mode()=='\022',0
 Ac('normal! \027')
-local _, R,C = unpack(vim.fn.getpos("'<"))
-local _, r,c = unpack(vim.fn.getpos("'>"))
+local _, R,C = unpack(Vf.getpos("'<"))
+local _, r,c = unpack(Vf.getpos("'>"))
 V_C=virC({R,C})
 V_c=virC({r,c})
 if VBlk then
 	if V_C>V_c then
-		Vwd=V_C-V_c
-		C= c+V_c-virC({R,c})
-		V_C=virC({R,C})
-		c=c+Vwd
-		V_c=virC({r,c})
-	else Vwd=V_c-V_C end
+		t= c+V_c-virC({R,c}) t= t+V_c-virC({R,t})
+		c= C+V_C-virC({r,C}) c= c+V_C-virC({r,c}) C=t
+		V_C=virC({R,C}) V_c=virC({r,c})
+	end
+	Vwd=V_c-V_C
 	s=string.rep(' ',A.nvim_get_option('tabstop'))
+	h=math.floor(V_C/2) H=math.floor(V_c/2)
 	for i=r,R,-1 do
-		iC=C +V_C -virC({i,C})	iC=iC +V_C -virC({i,iC})
-		nC=C +V_C -virC({i+1,C}) nC=nC +V_C -virC({i+1,nC})
-		ic= c +V_c -virC({i,c})
-		ic= ic +V_c -virC({i,ic})
-		l=vim.fn.getline(i)
+		iC= h+ V_C-virC({ i,h}) iC= iC+ V_C-virC({ i,iC})
+		ic= H+ V_c-virC({ i,H}) ic= ic+ V_c-virC({ i,ic})
+		tC= h+ V_C-virC({i+1,h}) tC= tC +V_C -virC({i+1, tC})
+		l=Vf.getline(i)
 		l=string.sub( l,1,iC-1)..(string.gsub(string.sub( l,iC,ic),'[\09]',s))..string.sub( l,ic+1)
-		vim.fn.setline(i,l)
-		d=V_C-virC({i+1,'$'})
-		e=vim.fn.col({i+1,'$'})-1
-		if d>0 then A.nvim_buf_set_text(0, i,e, i,e, {string.rep(' ',d)}) end
+		Vf.setline(i,l) d= V_C -virC({i+1,'$'})
+		if d>0 then
+			e=Vf.col({i+1,'$'})-1
+			A.nvim_buf_set_text(0, i,e, i,e, {string.rep(' ',d)}) end
 		A.nvim_buf_set_text(0, i-1, iC-1, i-1, iC+Vwd, {})
-		A.nvim_buf_set_text(0, i, nC-1, i, nC-1, {string.sub( l,iC,iC+Vwd)})
+		A.nvim_buf_set_text(0, i, tC-1, i, tC-1, {string.sub( l,iC,iC+Vwd)})
 	end
 	Ac('normal! '..(R+1)..'G'..V_C..'|\022'..(r+1)..'G'..V_c..'|')
 else
 	s=A.nvim_buf_get_text(0, R-1, C-1, r-1, c, {})
-	e=c==vim.fn.col({r,'$'})
+	e=c==Vf.col({r,'$'})
 	A.nvim_buf_set_text(0, R-1, C-1, r-1,e and c-1 or c, {})
 	if e then
 		table.insert(s,'') Ac(R..','..(R+1)..'join') end
 	if virC({R+1, '$'})<V_C then
-			e=vim.fn.col({R+1,'$'})
+			e=Vf.col({R+1,'$'})
 	else
 		e= C+V_C-virC({R+1,C}) e=e+V_C-virC({R+1,e}) end
 	A.nvim_buf_set_text(0, R, e-1, R, e-1, s)
@@ -584,32 +594,31 @@ end
 Akm('n', 'K', ':m .+1<CR>', {noremap=true,silent=true})
 Akm('v', 'K', [[mode()=='V'? ":<C-u>'>+1m '<-1|let g:kmV_B=1<CR>gv=gv": '<cmd>lua slDN()<CR>']], {noremap=true,expr=true,silent=true})
 function slLF() -- Move visual char/block left
-local VBlk, e,l, V_C,V_c, Vwd,d,iC,ic,ns,V =vim.fn.mode()=='\022'
+local VBlk, e,l, V_C,V_c, Vwd,d,iC,ic,ns,V =Vf.mode()=='\022'
 Ac('normal! \027')
-local _,R,C =unpack(vim.fn.getpos("'<"))
-local _,r,c =unpack(vim.fn.getpos("'>"))
+local _,R,C =unpack(Vf.getpos("'<"))
+local _,r,c =unpack(Vf.getpos("'>"))
 V_C=virC({R,C})
 V_c=virC({r,c})
 if VBlk then
 	if V_C>V_c then
 		Vwd=V_C-V_c
-		C= c+V_c -virC({R,c})
-		V_C=virC({R,C})
-		c=c+Vwd
-		V_c=virC({r,c})
+		t= c+V_c-virC({R,c}) t= t+V_c-virC({R,t})
+		c= C+V_C-virC({r,C}) c= c+V_C-virC({r,c}) C=t
+		V_C=virC({R,C}) V_c=virC({r,c})
 	else Vwd=V_c-V_C end
 	ns=A.nvim_get_option('tabstop') s=string.rep(' ',ns)
 	if C<2 then
-		C=vim.fn.col({R-1,'$'}) V=virC({R-1,'$'})
+		C=Vf.col({R-1,'$'}) V=virC({R-1,'$'})
 		for i=R,r do
 			ic= c +V_c -virC({i,c})
 			ic= ic +V_c -virC({i,ic})
-			l=vim.fn.getline(i)
+			l=Vf.getline(i)
 			l=(string.gsub(string.sub( l,1,ic),'[\09]',s))..string.sub( l,ic+1)
-			vim.fn.setline( i, string.sub( l,Vwd+2))
+			Vf.setline( i, string.sub( l,Vwd+2))
 			e=virC( { i-1,'$'})
 			d=V-e
-			vim.fn.setline(i-1, vim.fn.getline(i-1)..(d>0 and string.rep(' ',d) or ''))
+			Vf.setline(i-1, Vf.getline(i-1)..(d>0 and string.rep(' ',d) or ''))
 			iC= C +V -virC({ i-1, C})
 			iC= iC +V -virC({ i-1, iC})
 			A.nvim_buf_set_text(0, i-2, iC-1, i-2, iC-1, {string.sub( l,1,1+Vwd)})
@@ -619,44 +628,42 @@ if VBlk then
 		for i=R,r do
 			iC= C +V_C -virC({i,C}) iC=iC +V_C -virC({i,iC})
 			ic= c +V_c -virC({i,c}) ic=ic +V_c -virC({i,ic})
-			l=vim.fn.getline(i)
+			l=Vf.getline(i)
 			l=string.sub( l,1,iC-1)..(string.gsub(string.sub( l,iC,ic),'[\09]',s))..string.sub( l,ic+1)
 			if string.sub( l,iC-1,iC-1)=='\09' then
 				l=string.sub( l,1,iC-2)..s..string.sub(l,iC) iC=iC+ns-1
 			end
-			vim.fn.setline( i,l)
+			Vf.setline( i,l)
 			A.nvim_buf_set_text(0, i-1, iC-1, i-1, iC+Vwd, {})
 			A.nvim_buf_set_text(0, i-1, iC-2, i-1, iC-2, {string.sub( l,iC,iC+Vwd)})
 		end
 		Ac('normal! '..R..'G'..(V_C-1)..'|\022'..r..'G'..(V_c-1)..'|')
 	end
 else
-	c=math.min(c,vim.fn.col({r,'$'})-1)
+	c=math.min(c,Vf.col({r,'$'})-1)
 	s=A.nvim_buf_get_text(0, R-1, C-1, r-1, c, {})
 	A.nvim_buf_set_text(0, R-1, C-1, r-1, c, {})
 	if C<2 then
-		R=R-1 ;C=vim.fn.col({R,'$'}) r=r-1
+		R=R-1 ;C=Vf.col({R,'$'}) r=r-1
 		c=R==r and '$' or c
 	else C=C-1 ;c=R==r and c-1 or c end
 	A.nvim_buf_set_text(0, R-1, C-1, R-1, C-1, s)
 	Ac('normal! '..R..'G'..virC({R,C})..'|v'..r..'G'..virC({r,c})..'|')
 end vim.g.kmV_B=1
 end
-Akm('v', 'J', '<cmd>lua slLF()<CR>', {noremap=true,silent=true})
+Akm('v', 'J', [[mode()=='V'? 'J' :'<cmd>lua slLF()<CR>']], {expr=true,noremap=true,silent=true})
 function slRG() -- Move visual char/block right
-local VBlk, e,l,s,b, V_C,V_c, Vwd,t,V =vim.fn.mode()=='\022'
+local VBlk, e,l,s,b, V_C,V_c, Vwd,t,V =Vf.mode()=='\022'
 Ac('normal! \027')
-local _,R,C = unpack(vim.fn.getpos("'<"))
-local _,r,c = unpack(vim.fn.getpos("'>"))
+local _,R,C = unpack(Vf.getpos("'<"))
+local _,r,c = unpack(Vf.getpos("'>"))
 V_C=virC({R,C})
 V_c=virC({r,c})
 if VBlk then
 	if V_C>V_c then
-		Vwd=V_C-V_c
-		C= c+V_c-virC({R,c})
-		V_C=virC({R,C})
-		c=c+Vwd
-		V_c=virC({r,c})
+		t= c+V_c-virC({R,c}) t= t+V_c-virC({R,t})
+		c= C+V_C-virC({r,C}) c= c+V_C-virC({r,c}) C=t
+		V_C=virC({R,C}) V_c=virC({r,c})
 	else Vwd=V_c-V_C end
 	ns=A.nvim_get_option('tabstop') s=string.rep(' ',ns)
 	e= virC({R,'$'})
@@ -664,8 +671,8 @@ if VBlk then
 		for i=r,R,-1 do
 			iC= C +V_C -virC({i,C})
 			iC= iC +V_C -virC({i,iC})
-			l=vim.fn.getline(i)
-			vim.fn.setline( i,string.sub( l,1,iC-1)..string.sub( l,iC+Vwd+1))
+			l=Vf.getline(i)
+			Vf.setline( i,string.sub( l,1,iC-1)..string.sub( l,iC+Vwd+1))
 			A.nvim_buf_set_text(0, i, 0, i, 0, {(string.gsub(string.sub( l,iC,iC+Vwd),'[\09]',s))})
 		end
 		Ac('normal! '..(R+1)..'G1|\022'..(r+1)..'G'..(1+Vwd)..'|')
@@ -675,24 +682,24 @@ if VBlk then
 			iC=iC +V_C -virC({i,iC})
 			ic= c +V_c- virC({i,c})
 			ic=ic +V_c -virC({i,ic})
-			l=vim.fn.getline(i)
+			l=Vf.getline(i)
 			l=string.sub( l,1,iC-1)..(string.gsub(string.sub( l,iC,ic),'[\09]',s))..string.sub( l,ic+1)
 			if string.sub( l,ic+1,ic+1)=='\09' then
 				l=string.sub( l,1,ic)..s..string.sub(l,ic+2)
 			elseif V_c == virC({i,'$'})-1 then
 				l=l..string.rep(' ',e-virC({i,'$'}))
 			end
-			vim.fn.setline( i,l)
+			Vf.setline( i,l)
 			A.nvim_buf_set_text(0, i-1, iC-1, i-1, iC+Vwd, {})
 			A.nvim_buf_set_text(0, i-1, iC, i-1, iC, {string.sub( l,iC,iC+Vwd)})
 		end
 		Ac('normal! '..R..'G'..(V_C+1)..'|\022'..r..'G'..(V_c+1)..'|')
 	end
 else
-	c=math.min(c,vim.fn.col({r,'$'})-1)
+	c=math.min(c,Vf.col({r,'$'})-1)
 	s=A.nvim_buf_get_text(0, R-1, C-1, r-1, c, {})
 	A.nvim_buf_set_text(0, R-1, C-1, r-1, c, {})
-	if C==vim.fn.col({R,'$'}) then
+	if C==Vf.col({R,'$'}) then
 		C=0; R=R+1 ;r=r+1
 		c=R==r and #s[1] or c
 	elseif R==r then c=c+1 end
@@ -701,7 +708,7 @@ else
 end
 vim.g.kmV_B=1
 end
-Akm('v', 'L', '<cmd>lua slRG()<CR>', {noremap=true,silent=true})
+Akm('v', 'L', [[mode()=='V'? '' :'<cmd>lua slRG()<CR>']], {expr=true,noremap=true,silent=true})
 -- Comment
 Akm('v', 'c', '', {noremap=true})
 
