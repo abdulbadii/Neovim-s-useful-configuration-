@@ -51,8 +51,8 @@ autocmd VimEnter * let &cmdheight= @c
 	set breakindentopt=shift:0
 	set number
 	set whichwrap+=<,>,[,],l
-	highlight TrWSp ctermbg=241 guibg=#494949
-	match TrWSp /\s\+$/
+	highlight TrlSp ctermbg=241 guibg=#494949
+	match TrlSp /\v.*\S\zs\s+$/
 autocmd CmdlineLeave * if getcmdtype()=~'[/?]' |call searchcount() |endif
 autocmd InsertEnter * set timeoutlen=199
 autocmd InsertLeave * set timeoutlen=449 |autocmd TextChangedI * lua sTmrK()
@@ -133,7 +133,7 @@ Akm('c', '<Insert>', '<C-c>', {noremap=true})
 vim.keymap.set({'v','o','s','t'}, '<Insert>', '<cmd>let g:WDx=0<CR><Esc>', {noremap=true})
 
 Akm('n', '<Space>', "col('.')<col('$')-1? 'i <Esc>`^': 'a <Esc>`^'", {expr=true,noremap=true})
-Akm('v', '<Space>', [[mode()=='v'? '<C-v>': mode()=="\<C-v>"? 'V' :'<C-v>']], {expr=true,noremap=true})
+Akm('v', '<Space>', "mode()=~'^[V\x16]' ? 'v' :'<C-v>'", {expr=true,noremap=true})
 --Akm('n', '<C-Space>', "col('.')<col('$')-1? '': 'i <Esc>`^'", {expr=true,noremap=true}) --GUI
 Akm('n', '<M-Space>', "col('.')<col('$')-1? '': 'i <Esc>`^'", {expr=true,noremap=true})
 -- p behaves P except at EOL, vice versa P behaves p, in visual it'll swap selc./register
@@ -402,15 +402,59 @@ endfunction
 nnoremap <expr><silent> gu getline('.')[col('.')-1]=~'\w'? 'viw:<C-u>call LtrC()<CR>' :''
 vnoremap <silent> gu :<C-u>let g:Vlc=1\|call LtrC()<CR>
 ]])
-local Sw2n, LEN,Len,R,C,r,c = nil,0,0 --2 words/selections swap
-function swS()
+local Sw2n, s,t,R,C,r,c = nil,0,0 --2 words/selections swap
+function sWS()
+	local VBlk, b,S, Y,X, y,x = Vf.mode()=='\022'
+	--vim.cmd "highlight Word guibg=#00EF00 guifg=#FF00BB" --GUI
+	vim.cmd "highlight Word ctermbg=10 ctermfg=0"
+	if Sw2n then
+		Ac('normal! '..(vSl and '' or 'viw')..'\027')
+		_,Y,X = unpack(Vf.getpos("'<"))
+		_,y,x = unpack(Vf.getpos("'>"))
+		t=A.nvim_buf_get_text(0, Y-1,X-1, y-1,x, {})
+		if Y>R or Y==R and X>C then		--always write higher address first
+			A.nvim_buf_set_text(0, Y-1,X-1, y-1,x, s)
+			for i,e in ipairs(s) do b=i>1 and 0 or X-1
+				A.nvim_buf_add_highlight(0,-1,'Word', Y-2+i, b,b+#e) end
+			A.nvim_buf_set_text(0, R-1,C-1, r-1,c, t)
+			for i,e in ipairs(t) do b=i>1 and 0 or C-1
+				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, b,b+#e) end
+		else
+			A.nvim_buf_set_text(0, R-1,C-1, r-1,c, t)
+			for i,e in ipairs(t) do b=i>1 and 0 or C-1
+				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, b,b+#e) end
+			A.nvim_buf_set_text(0, Y-1,X-1, y-1,x, s)
+			for i,e in ipairs(s) do b=i>1 and 0 or X-1
+				A.nvim_buf_add_highlight(0,-1,'Word', Y-2+i, b,b+#e) end
+		end
+		vim.defer_fn(function()
+			A.nvim_buf_clear_namespace(0, -1, R-1, R)
+			A.nvim_buf_clear_namespace(0, 0, Y-1, Y) end,4100)
+		Sw2n=nil
+	else
+		Ac('normal! '..(vSl and '' or 'viw')..'\027')
+		_,R,C = unpack(Vf.getpos("'<"))
+		_,r,c = unpack(Vf.getpos("'>"))
+		if VBlk then
+			V_C=virC({R,C}) V_c=virC({r,c}) Sw2n=1
+		else
+			s=A.nvim_buf_get_text(0, R-1,C-1, r-1,c, {})
+			for i,e in ipairs(s) do
+				b=i>1 and 0 or C-1
+				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, b,b+#e) end
+			print('Go on to next selection or word to swap')
+		end
+		Sw2n=1
+	end
+	vSl=nil
+end
+Akm('n', 'Y', ':lua sWS()<CR>', {noremap=true})
+Akm('v', 'Y', '<cmd>lua vSl=1;sWS()<CR>', {noremap=true})
+function swGlo()
 	local VBlk, t, Y,X, y,x = Vf.mode()=='\022'
 	--vim.cmd "highlight Word guibg=#00EF00 guifg=#FF00BB" --GUI
 	vim.cmd "highlight Word ctermbg=10 ctermfg=0"
-	if VBlk then
-		V_C=virC({R,C})
-		V_c=virC({r,c})
-	elseif Sw2n then
+	if Sw2n then
 		Ac('normal! '..(vSl and '' or 'viw')..'\027')
 		_,Y,X = unpack(Vf.getpos("'<"))
 		_,y,x = unpack(Vf.getpos("'>"))
@@ -423,6 +467,7 @@ function swS()
 		vim.defer_fn(function()
 			A.nvim_buf_clear_namespace(0, -1, R-1, R)
 			A.nvim_buf_clear_namespace(0, 0, Y-1, Y) end,2770)
+		--vim.cmd[[exe '.,+57s/\v<('.a.')|('.b.')>/\=submatch(1)==""? "'.a.'":"'.b.'"/g']]
 		Sw2n=nil
 	else LEN=0; Len=0
 		Ac('normal! '..(vSl and 'y' or 'viwy'))
@@ -435,19 +480,15 @@ function swS()
 	end
 	vSl=nil
 end
-Akm('n', '<Leader>P', ':lua swS()<CR>', {noremap=true})
-Akm('v', '<Leader>P', '<cmd>lua vSl=1;swS()<CR>', {})
---function swGSR()
---vim.cmd[[let a= nr2char(getchar()) |let b= nr2char(getchar())]]
---vim.cmd[[exe '.,+57s/\v<('.a.')|('.b.')>/\=submatch(1)==""? "'.a.'":"'.b.'"/g']]
---end
+Akm('n', '<Leader>/', ':lua swGlo()<CR>', {noremap=true})
+Akm('v', '<Leader>/', '<cmd>lua vSl=1;swGlo()<CR>', {noremap=true})
 -- Duplicate line or selection
 Akm('n', 'b', ':t.<CR>', {noremap=true})
 function dup(S)
-local VBlk, isVL, s, of, nl, t, b,d,Vwd= Vf.mode()=='\022', Vf.mode()=='V', '', {}, 0,0
-Ac('normal! \027') 
-local _, R,C = unpack(Vf.getpos("'<"))
-local _, r,c = unpack(Vf.getpos("'>"))
+local VBlk, isVL, of,nl, s,t, b,d,Vwd= Vf.mode()=='\022', Vf.mode()=='V', 0,0
+Ac('normal! \027')
+local _,R,C = unpack(Vf.getpos("'<"))
+local _,r,c = unpack(Vf.getpos("'>"))
 V_C=virC({R,C})
 V_c=virC({r,c})
 if VBlk then
@@ -463,10 +504,9 @@ if VBlk then
 		for i= R,r do
 			iC= h+ V_C-virC({ i,h}) iC= iC+ V_C-virC({ i,iC})
 			ic= H+ V_c-virC({ i,H}) ic= ic+ V_c-virC({ i,ic})
-			Vf.append( n, string.sub( Vf.getline(i),iC,ic))
-			n=n+1
+			Vf.append( n,string.sub( Vf.getline(i),iC,ic)) n=n+1
 		end
-		Ac('normal! '..(r+1)..'G'..'1|\022'..n..'G'..(1+Vwd)..'|')
+		Ac('normal! '..(r+1)..'G'..'1|V'..n..'G$|')
 	else
 		for i= R,r do
 			iC= h+ V_C-virC({ i,h}) iC= iC+ V_C-virC({ i,iC})
@@ -479,10 +519,10 @@ if VBlk then
 	end
 else
 	if isVL then
-		if R==r then vim.cmd[[ let C=match(getline('.'), '\S')
+		if R==r then vim.cmd[[
+			let C=match(getline('.'), '\S')
 			let c=match(getline('.'), '\S\zs\s*$')]]
-			C=Vf.eval('C')+1
-			c=Vf.eval('c')
+			C=Vf.eval('C')+1 c=Vf.eval('c')
 		else c=Vf.col({r,'$'})-1 end
 	end
 	s=A.nvim_buf_get_text(0, R-1,C-1, r-1,c, {})
@@ -492,9 +532,8 @@ else
 		table.insert( s,1,'') d=1;nl=1 end
 	c=c==Vf.col('$') and c-1 or c		-- avoid newline col
 	A.nvim_buf_set_text(0, r-1,c, r-1,c, s)
-	l=r+nl
-	r=l+r-R
-	Ac('normal! '..l..'G'..virC({l,d})..'|v'..r..'G'..virC({r, Vf.col({r,isVL and '$' or of+#s[#s]})})..'|o')
+	l=r+nl; r=l+r-R
+	Ac('normal! '..l..'G'..virC({l,d})..'|'..(isVL and 'V' or 'v')..r..'G'..virC({r, Vf.col({r,isVL and '$' or of+#s[#s]})})..'|o')
 end
 end
 Akm('v', 'b', '<cmd>lua dup();vim.g.kmV_B=1<CR>', {noremap=true})
