@@ -52,7 +52,7 @@ autocmd VimEnter * let &cmdheight= @c
 	set number
 	set whichwrap+=<,>,[,],l
 	highlight TrlSp ctermbg=241 guibg=#494949
-	match TrlSp /\v.*\S\zs\s+$/
+	match TrlSp /\v\S\zs\s+$/
 autocmd CmdlineLeave * if getcmdtype()=~'[/?]' |call searchcount() |endif
 autocmd InsertEnter * set timeoutlen=199
 autocmd InsertLeave * set timeoutlen=449 |autocmd TextChangedI * lua sTmrK()
@@ -197,8 +197,8 @@ Akm('v', 'j', [[col('.') == 1? 'k$<cmd>let g:kmV_B=0<CR>': 'h<cmd>let g:kmV_B=0<
 Akm('v', 'l', [[col('.') == col('$')-1? 'j0<cmd>let g:kmV_B=0<CR>' : 'l<cmd>let g:kmV_B=0<CR>']], { noremap=true, expr=true })
 Akm('v', 'i', 'k<cmd>let g:kmV_B=0<CR>', {noremap=true,silent=true})
 Akm('v', 'k', 'j<cmd>let g:kmV_B=0<CR>', {noremap=true,silent=true})
---Akm('n', '<C-u>', '<C-e>', {noremap=true})
-Akm('n', '<C-o>', '<C-e>', {noremap=true})
+Akm('n', '<C-u>', ':exe "normal! ".winheight(0)."\\<C-y>zt<C-r>"', {noremap=true,silent=true})
+Akm('n', '<C-o>', ':exe "normal! ".winheight(0)."\\<C-e>zb<C-r>"', {noremap=true,silent=true})
 Akm('n', '<C-h>', '<C-e>', {noremap=true})
 Akm('n', '<Up>', '<C-u>', {noremap=true})
 Akm('n', '<Down>', '<C-d>', {noremap=true})
@@ -402,44 +402,68 @@ endfunction
 nnoremap <expr><silent> gu getline('.')[col('.')-1]=~'\w'? 'viw:<C-u>call LtrC()<CR>' :''
 vnoremap <silent> gu :<C-u>let g:Vlc=1\|call LtrC()<CR>
 ]])
-local Sw2n, s,t,R,C,r,c = nil,0,0 --2 words/selections swap
+local Sw2n, S,T,R,C,r,c = nil,{},{} -- 2 words/selections swap
 function sWS()
-	local VBlk, b,S, Y,X, y,x = Vf.mode()=='\022'
+	local VBlk, VBl, b,s,t, Y,X, y,x = Vf.mode()=='\022'
 	--vim.cmd "highlight Word guibg=#00EF00 guifg=#FF00BB" --GUI
 	vim.cmd "highlight Word ctermbg=10 ctermfg=0"
 	if Sw2n then
 		Ac('normal! '..(vSl and '' or 'viw')..'\027')
 		_,Y,X = unpack(Vf.getpos("'<"))
 		_,y,x = unpack(Vf.getpos("'>"))
-		t=A.nvim_buf_get_text(0, Y-1,X-1, y-1,x, {})
-		if Y>R or Y==R and X>C then		--always write higher address first
-			A.nvim_buf_set_text(0, Y-1,X-1, y-1,x, s)
-			for i,e in ipairs(s) do b=i>1 and 0 or X-1
-				A.nvim_buf_add_highlight(0,-1,'Word', Y-2+i, b,b+#e) end
-			A.nvim_buf_set_text(0, R-1,C-1, r-1,c, t)
-			for i,e in ipairs(t) do b=i>1 and 0 or C-1
-				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, b,b+#e) end
+		T=A.nvim_buf_get_text(0, Y-1,X-1, y-1,x, {})
+		if Y<R or Y==R and X<C then		-- always write higher offset first
+			t={S,Y,X,y,x} ; S,Y,X,y,x=T,R,C,r,c ; T,R,C,r,c=unpack(t) end
+		
+		if VBlk then
+			if V_C>V_c then
+				t= c+V_c-virC({R,c}) t= t+V_c-virC({R,t})
+				c= C+V_C-virC({r,C}) c= c+V_C-virC({r,c}) C=t
+				V_C=virC({R,C}) V_c=virC({r,c})
+			end
+			Vwd=V_c-V_C
+			s=string.rep(' ',A.nvim_get_option('tabstop'))
+			h=math.floor(V_C/2) H=math.floor(V_c/2)
+			for i=R,r do
+				iC= h+ V_C-virC({ i,h}) iC= iC+ V_C-virC({ i,iC})
+				ic= H+ V_c-virC({ i,H}) ic= ic+ V_c-virC({ i,ic})
+				tC= h+ V_C-virC({i-1,h}) tC= tC +V_C -virC({i-1, tC})
+				table.insert(S, (string.gsub(A.nvim_buf_get_text(0, i-1,iC-1, i-1,iC+Vwd,{}),'[\09]',s)))
+			end
+			
 		else
-			A.nvim_buf_set_text(0, R-1,C-1, r-1,c, t)
-			for i,e in ipairs(t) do b=i>1 and 0 or C-1
-				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, b,b+#e) end
-			A.nvim_buf_set_text(0, Y-1,X-1, y-1,x, s)
-			for i,e in ipairs(s) do b=i>1 and 0 or X-1
+			A.nvim_buf_set_text(0, Y-1,X-1, y-1,x, S)
+			for i,e in ipairs(S) do b=i>1 and 0 or X-1
 				A.nvim_buf_add_highlight(0,-1,'Word', Y-2+i, b,b+#e) end
-		end
-		vim.defer_fn(function()
-			A.nvim_buf_clear_namespace(0, -1, R-1, R)
-			A.nvim_buf_clear_namespace(0, 0, Y-1, Y) end,4100)
-		Sw2n=nil
+			A.nvim_buf_set_text(0, R-1,C-1, r-1,c, T)
+			for i,e in ipairs(T) do b=i>1 and 0 or C-1
+				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, b,b+#e) end
+			--end
+			vim.defer_fn(function()
+				A.nvim_buf_clear_namespace(0, -1, R-1,r) A.nvim_buf_clear_namespace(0, 0, Y-1,y) end,4100)
+		end Sw2n=nil
 	else
 		Ac('normal! '..(vSl and '' or 'viw')..'\027')
 		_,R,C = unpack(Vf.getpos("'<"))
 		_,r,c = unpack(Vf.getpos("'>"))
-		if VBlk then
-			V_C=virC({R,C}) V_c=virC({r,c}) Sw2n=1
+		if VBlk then VBl=1
+			if V_C>V_c then
+				t= c+V_c-virC({R,c}) t= t+V_c-virC({R,t})
+				c= C+V_C-virC({r,C}) c= c+V_C-virC({r,c}) C=t
+				V_C=virC({R,C}) V_c=virC({r,c})
+			end
+			Vwd=V_c-V_C
+			s=string.rep(' ',A.nvim_get_option('tabstop'))
+			h=math.floor(V_C/2) H=math.floor(V_c/2)
+			for i=R,r do
+				iC= h+ V_C-virC({ i,h}) iC= iC+ V_C-virC({ i,iC})
+				ic= H+ V_c-virC({ i,H}) ic= ic+ V_c-virC({ i,ic})
+				tC= h+ V_C-virC({i-1,h}) tC= tC +V_C -virC({i-1, tC})
+				table.insert(S, (string.gsub(A.nvim_buf_get_text(0, i-1,iC-1, i-1,iC+Vwd,{}),'[\09]',s)))
+			end
 		else
-			s=A.nvim_buf_get_text(0, R-1,C-1, r-1,c, {})
-			for i,e in ipairs(s) do
+			S=A.nvim_buf_get_text(0, R-1,C-1, r-1,c, {})
+			for i,e in ipairs(S) do
 				b=i>1 and 0 or C-1
 				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, b,b+#e) end
 			print('Go on to next selection or word to swap')
@@ -448,8 +472,8 @@ function sWS()
 	end
 	vSl=nil
 end
-Akm('n', 'Y', ':lua sWS()<CR>', {noremap=true})
-Akm('v', 'Y', '<cmd>lua vSl=1;sWS()<CR>', {noremap=true})
+Akm('n', '<Leader>[', ':lua sWS()<CR>', {noremap=true})
+Akm('v', '<Leader>[', '<cmd>lua vSl=1;sWS()<CR>', {noremap=true})
 function swGlo()
 	local VBlk, t, Y,X, y,x = Vf.mode()=='\022'
 	--vim.cmd "highlight Word guibg=#00EF00 guifg=#FF00BB" --GUI
@@ -519,10 +543,9 @@ if VBlk then
 	end
 else
 	if isVL then
-		if R==r then vim.cmd[[
-			let C=match(getline('.'), '\S')
-			let c=match(getline('.'), '\S\zs\s*$')]]
-			C=Vf.eval('C')+1 c=Vf.eval('c')
+		if R==r then isVL=nil
+			C=string.find(Vf.getline('.'), "%S")
+			c=string.find(Vf.getline('.'), "%S%s*$")
 		else c=Vf.col({r,'$'})-1 end
 	end
 	s=A.nvim_buf_get_text(0, R-1,C-1, r-1,c, {})
@@ -540,7 +563,7 @@ Akm('v', 'b', '<cmd>lua dup();vim.g.kmV_B=1<CR>', {noremap=true})
 Akm('v', '<Leader>b','<cmd>lua dup(1);vim.g.kmV_B=1<CR>', {noremap=true})
 -- Move visual char/block up
 function slUP()
-local VBlk, e,l, V_C,V_c, Vwd,d,iC,ic,nc,V =Vf.mode()=='\022',0
+local VBlk, e,l, V_C,V_c, Vwd,d,iC,ic,tC,nc,V =Vf.mode()=='\022',0
 Ac('normal! \027')
 local _, R,C = unpack(Vf.getpos("'<"))
 local _, r,c = unpack(Vf.getpos("'>"))
