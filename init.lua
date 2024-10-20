@@ -101,7 +101,7 @@ function sTmrK() -- Timer to auto exit Insert
 	Tmr:stop()
 	local now, T, t = vim.loop.hrtime()
 	t= Last and (now-Last)/1e6 or 3300
-	inT1= inT1 and inT1 or (t<900 and (t>610 and 1330 or 850) or 4700)
+	inT1= inT1 and inT1 or (t<900 and (t>610 and 1330 or 850) or 4410)
 	PreT=PreT and PreT or t
 	inT1=inT1+(t-PreT>90 and 197 or (t-PreT>0 and 69 or 0))
 	Tmr:start( (PreT+t+inT1)/2, 0, function()
@@ -441,8 +441,9 @@ function sWS()
 			nrT= y-Y+1
 			table.move(S, 1,nrT, 1,Ss)
 			for i,s in ipairs(Ss) do
-				A.nvim_buf_set_text(0, Y-2+i,X-1, Y-2+i,X-1, {s})
-				A.nvim_buf_add_highlight(0,-1,'Word', Y-2+i, X-1,X-1+#s) end
+				iX= X+ V_X-virC({ Y-1+i,X}) iX= iX+ V_X-virC({ Y-1+i,iX})
+				A.nvim_buf_set_text(0, Y-2+i,iX-1, Y-2+i,iX-1, {s})
+				A.nvim_buf_add_highlight(0,-1,'Word', Y-2+i, iX-1,iX-1+#s) end
 			p=string.rep(' ',V_X-1)
 			Ss={};table.move(S, nrT+1,#S, 1,Ss)
 			for i,s in ipairs(Ss) do
@@ -464,8 +465,9 @@ function sWS()
 			nrS= r-R+1
 			table.move(T, 1,nrS, 1,Ts)
 			for i,t in ipairs(Ts) do
-				A.nvim_buf_set_text(0, R-2+i,C-1, R-2+i,C-1, {t})
-				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, C-1,C-1+#t) end
+				iC= C+V_C-virC({ R-1+i,C}) iC= iC+V_C-virC({ R-1+i,iC})
+				A.nvim_buf_set_text(0, R-2+i,iC-1, R-2+i,iC-1, {t})
+				A.nvim_buf_add_highlight(0,-1,'Word', R-2+i, iC-1,iC-1+#t) end
 			p=string.rep(' ',V_C-1)
 			Ts={};table.move( T, nrS+1,#T, 1,Ts)
 			for i,t in ipairs(Ts) do
@@ -507,7 +509,6 @@ function sWS()
 end
 Akm('n', '<Leader>[', ':lua sWS()<CR>', {noremap=true})
 Akm('v', '<Leader>[', '<cmd>lua vSl=1;sWS()<CR>', {noremap=true})
---while 1 do print("PauseDebug") if '\r'==Vf.getcharstr() then break end end
 function swGlo()
 		--vim.cmd[[exe '.,+57s/\v<('.a.')|('.b.')>/\=submatch(1)==""? "'.a.'":"'.b.'"/g']]
 end
